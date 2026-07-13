@@ -1,0 +1,10 @@
+result
+result-*
+*.tmp
+*.bak
+# Secrets — niemals committen
+*.env
+*.key
+*.pem
+*.secret
+*.age
