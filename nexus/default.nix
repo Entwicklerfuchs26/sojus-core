@@ -17,6 +17,7 @@
     ./fuchs-mcp-darktable.nix    # Port 9011 – Darktable Fotografie
   ];
 
-  # Ports für Sojus Core auf darwin26 (192.168.1.26) öffnen
-  networking.firewall.allowedTCPPorts = [ 9000 9001 9002 9003 9004 9005 9006 9007 9008 9009 9010 9011 ];
+  # Ports sind localhost-only (127.0.0.1) — kein Firewall-Öffnen nötig.
+  # Für WireGuard-Zugriff von darwin26: entweder SSH-Tunnel über wg0,
+  # oder Binding auf wg0-IP ergänzen (dann hier freischalten).
 }

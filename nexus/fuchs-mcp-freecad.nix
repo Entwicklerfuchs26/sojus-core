@@ -16,7 +16,7 @@ in {
       Type       = "simple";
       User       = "fuchs";
       ExecStart  = ''${pkgs.uv}/bin/uvx mcp-proxy \
-        --port ${toString port} --host 0.0.0.0 \
+        --port ${toString port} --host 127.0.0.1 \
         --transport streamablehttp \
         --named-server freecad "${pkgs.uv}/bin/uvx freecad-mcp"'';
       Restart    = "on-failure";

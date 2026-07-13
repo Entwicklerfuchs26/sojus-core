@@ -18,7 +18,7 @@ in {
     serviceConfig = {
       Type       = "simple";
       User       = "fuchs";
-      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port ${toString port}";
+      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 127.0.0.1 --port ${toString port}";
       Restart    = "on-failure";
       RestartSec = "10s";
     };

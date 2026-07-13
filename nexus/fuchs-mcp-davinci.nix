@@ -20,7 +20,7 @@ let
     export RESOLVE_SCRIPT_LIB="$RESOLVE/libs/Fusion/fusionscript.so"
 
     exec ${pkgs.uv}/bin/uvx mcp-proxy \
-      --port ${toString port} --host 0.0.0.0 \
+      --port ${toString port} --host 127.0.0.1 \
       --transport streamablehttp \
       --pass-environment \
       --named-server davinci "${pkgs.uv}/bin/uvx resolve-mcp"
