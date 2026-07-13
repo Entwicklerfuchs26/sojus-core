@@ -20,7 +20,7 @@ in {
       User       = "fuchs";
       # mcp-proxy bridgt stdio→HTTP; --named-server definiert den stdio-Sub-Prozess
       ExecStart  = ''${pkgs.uv}/bin/uvx mcp-proxy \
-        --port ${toString port} --host 127.0.0.1 \
+        --port ${toString port} --host 192.168.1.40 \
         --transport streamablehttp \
         --named-server filesystem \
           "${pkgs.nodejs}/bin/npx -y @modelcontextprotocol/server-filesystem ${allowedDirs}"'';

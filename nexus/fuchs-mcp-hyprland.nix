@@ -11,7 +11,7 @@ let
       export HYPRLAND_INSTANCE_SIGNATURE="$SIG"
     fi
     exec ${pkgs.uv}/bin/uvx fastmcp run ${script} \
-      --transport streamable-http --host 127.0.0.1 --port ${toString port}
+      --transport streamable-http --host 192.168.1.40 --port ${toString port}
   '';
 in {
   systemd.services.fuchs-mcp-hyprland = {

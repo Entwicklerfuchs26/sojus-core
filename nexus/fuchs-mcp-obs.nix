@@ -20,7 +20,7 @@ in {
       User            = "fuchs";
       EnvironmentFile = "/etc/sojus/nexus/fuchs-mcp-obs.env";
       ExecStart       = ''${pkgs.uv}/bin/uvx mcp-proxy \
-        --port ${toString port} --host 127.0.0.1 \
+        --port ${toString port} --host 192.168.1.40 \
         --transport streamablehttp \
         --pass-environment \
         --named-server obs "${pkgs.nodejs}/bin/npx -y obs-mcp@latest"'';

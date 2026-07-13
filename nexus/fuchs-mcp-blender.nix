@@ -16,7 +16,7 @@ in {
       Type       = "simple";
       User       = "fuchs";
       ExecStart  = ''${pkgs.uv}/bin/uvx mcp-proxy \
-        --port ${toString port} --host 127.0.0.1 \
+        --port ${toString port} --host 192.168.1.40 \
         --transport streamablehttp \
         --named-server blender "${pkgs.uv}/bin/uvx blender-mcp"'';
       Restart    = "on-failure";

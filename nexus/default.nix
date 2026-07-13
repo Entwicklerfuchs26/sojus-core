@@ -17,7 +17,26 @@
     ./fuchs-mcp-darktable.nix    # Port 9011 – Darktable Fotografie
   ];
 
-  # Ports sind localhost-only (127.0.0.1) — kein Firewall-Öffnen nötig.
-  # Für WireGuard-Zugriff von darwin26: entweder SSH-Tunnel über wg0,
-  # oder Binding auf wg0-IP ergänzen (dann hier freischalten).
+  # ── Firewall: Ports 9000-9011 nur für darwin26 + nexus selbst ───────────────
+  # Services binden auf 192.168.1.40. Erlaubt sind ausschließlich:
+  #   192.168.1.26  – darwin26 / Sojus Core
+  #   192.168.1.40  – nexus selbst (Claude Code lokal)
+  # Alle anderen IPs im LAN werden abgewiesen (TCP RST + Log).
+  networking.firewall.extraCommands = ''
+    # Dedizierte Chain anlegen (oder leeren wenn Neustart)
+    iptables -N mcp-sojus-filter 2>/dev/null || iptables -F mcp-sojus-filter
+
+    iptables -A mcp-sojus-filter -s 192.168.1.26 -j nixos-fw-accept  # darwin26
+    iptables -A mcp-sojus-filter -s 192.168.1.40 -j nixos-fw-accept  # nexus selbst
+    iptables -A mcp-sojus-filter -j nixos-fw-log-refuse              # alle anderen
+
+    # In nixos-fw einhängen (vor dem Default-Drop, da extraCommands vor finalem Reject läuft)
+    iptables -A nixos-fw -p tcp --dport 9000:9011 -j mcp-sojus-filter
+  '';
+
+  networking.firewall.extraStopCommands = ''
+    iptables -D nixos-fw -p tcp --dport 9000:9011 -j mcp-sojus-filter 2>/dev/null || true
+    iptables -F mcp-sojus-filter 2>/dev/null || true
+    iptables -X mcp-sojus-filter 2>/dev/null || true
+  '';
 }
