@@ -16,8 +16,8 @@ in {
     wantedBy    = [ "multi-user.target" ];
     after       = [ "network.target" ];
 
-    # npx spawns `sh` internally → bash must be in PATH
-    path = [ pkgs.bash ];
+    # npx spawns `sh` and `node` internally → both must be in PATH
+    path = [ pkgs.bash pkgs.nodejs ];
 
     environment = {
       HOME             = "/home/fuchs";
