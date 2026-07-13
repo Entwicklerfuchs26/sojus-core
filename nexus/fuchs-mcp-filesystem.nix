@@ -10,6 +10,9 @@ in {
     wantedBy    = [ "multi-user.target" ];
     after       = [ "network.target" ];
 
+    # npx spawns `sh` internally → bash must be in PATH
+    path = [ pkgs.bash ];
+
     environment = {
       HOME     = "/home/fuchs";
       NPM_CONFIG_CACHE = "/home/fuchs/.npm";
