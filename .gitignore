@@ -2,9 +2,9 @@ result
 result-*
 *.tmp
 *.bak
-# Secrets — niemals committen
+# Klartext-Secrets — niemals committen
 *.env
 *.key
 *.pem
 *.secret
-*.age
+# .age-Dateien sind rage-verschlüsselt → committen erlaubt
