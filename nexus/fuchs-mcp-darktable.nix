@@ -9,10 +9,11 @@ in {
     wantedBy    = [ "multi-user.target" ];
     after       = [ "network.target" ];
 
+    # darktable-cli via NixOS path-Attribut (statt environment.PATH, das kollidiert)
+    path = [ pkgs.darktable ];
+
     environment = {
       HOME = "/home/fuchs";
-      # darktable-cli für Export; sqlite3 via CPython stdlib
-      PATH = "/run/current-system/sw/bin:/run/wrappers/bin";
     };
 
     serviceConfig = {

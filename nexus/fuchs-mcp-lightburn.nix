@@ -9,10 +9,11 @@ in {
     wantedBy    = [ "multi-user.target" ];
     after       = [ "network.target" ];
 
+    # lightburn ist proprietär/unfree und nicht über pkgs verfügbar →
+    # kein path-Attribut; lightburn_open() gibt graceful error wenn Binary fehlt.
+
     environment = {
       HOME = "/home/fuchs";
-      # lightburn binary muss im PATH sein (aus dem NixOS-Paket)
-      PATH = "/run/current-system/sw/bin:/run/wrappers/bin";
     };
 
     serviceConfig = {

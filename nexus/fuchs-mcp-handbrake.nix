@@ -9,10 +9,11 @@ in {
     wantedBy    = [ "multi-user.target" ];
     after       = [ "network.target" ];
 
+    # HandBrakeCLI via NixOS path-Attribut (statt environment.PATH, das kollidiert)
+    path = [ pkgs.handbrake ];
+
     environment = {
       HOME = "/home/fuchs";
-      # HandBrakeCLI muss im PATH sein
-      PATH = "/run/current-system/sw/bin:/run/wrappers/bin";
     };
 
     serviceConfig = {
