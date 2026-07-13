@@ -1,6 +1,7 @@
 { config, pkgs, lib, ... }:
 {
   imports = [
+    ./secrets.nix
     ./sojus-core.nix
     ./open-webui.nix
     ./fuchs-discord.nix
