@@ -18,6 +18,8 @@ in {
     wantedBy    = [ "multi-user.target" ];
 
     environment = {
+      NEXTCLOUD_HOST       = "https://edaphos.weites-feld.org";
+      NEXTCLOUD_USERNAME   = "entwicklerfuchs";
       HOME                 = "/var/lib/sojus-mcp-supplement";
       UV_PYTHON            = "${pkgs.python3}/bin/python3";
       UV_PYTHON_PREFERENCE = "only-system";

@@ -2,7 +2,6 @@
 {
   imports = [
     ./sojus-core.nix
-    ./sojus-pipeline.nix
     ./open-webui.nix
     ./fuchs-discord.nix
     ./fuchs-email.nix
