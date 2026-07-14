@@ -64,14 +64,17 @@
                  "schick an", "schicke an", "schick eine", "sende eine",
                  "weites feld", "community", "ankündigung", "kanal",
                  "direktnachricht", "dm an", "talk nachricht"],
-    "servers": ["nextcloud", "fuchs-nextcloud-private", "nextcloud-supplement"]
+    "servers": ["nextcloud", "fuchs-nextcloud-private", "nextcloud-supplement"],
+    "tool_prefix_filter": ["talk_", "nc_announcements_", "nc_mail_send_message", "nc_mail_list", "nc_mail_get"],
+    "force_anthropic": true
   },
 
   "email": {
     "keywords": ["mail", "email", "e-mail", "inbox", "postfach", "sende email",
                  "schreib email", "hofpause", "arteigen", "smtp", "imap",
                  "antworten", "weiterleiten", "betreff"],
-    "servers": ["fuchs-email"]
+    "servers": ["fuchs-email"],
+    "force_anthropic": true
   },
 
   "discord": {
@@ -84,7 +87,8 @@
     "keywords": ["terminal", "shell", "bash", "befehl", "ausführen", "nexus",
                  "command", "cli", "skript ausführen", "prozess", "ps aux",
                  "systemctl", "journalctl", "grep", "ls ", "ls -"],
-    "servers": ["fuchs-shell"]
+    "servers": ["fuchs-shell"],
+    "force_anthropic": true
   },
 
   "automation": {

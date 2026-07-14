@@ -358,19 +358,29 @@ async def _fetch_server_tools(server: str, url: str) -> list[dict]:
         return []
 
 
-async def get_tools_for_query(query: str) -> tuple[list[dict], dict[str, tuple[str, str]]]:
-    """Gibt (openai_tools_list, {tool_name: (server, url)}) zurück."""
+async def get_tools_for_query(
+    query: str,
+) -> tuple[list[dict], dict[str, tuple[str, str]], bool]:
+    """Gibt (openai_tools_list, {tool_name: (server, url)}, force_anthropic) zurück."""
     groups = _load_tool_groups()
     query_lower = query.lower()
 
     matched_servers: set[str] | None = None
+    tool_prefix_filter: list[str] | None = None
+    force_anthropic: bool = False
+
     for group_name, group_data in groups.items():
         if not isinstance(group_data, dict):
             continue
         keywords: list[str] = group_data.get("keywords", [])
         if any(kw in query_lower for kw in keywords):
-            matched_servers = set(group_data.get("servers", []))
-            log.info("Tool-Router: Gruppe '%s' → %s", group_name, matched_servers)
+            matched_servers     = set(group_data.get("servers", []))
+            tool_prefix_filter  = group_data.get("tool_prefix_filter") or None
+            force_anthropic     = bool(group_data.get("force_anthropic", False))
+            log.info(
+                "Tool-Router: Gruppe '%s' → %s (filter=%s, force_anthropic=%s)",
+                group_name, matched_servers, tool_prefix_filter, force_anthropic,
+            )
             break
 
     servers_to_query = matched_servers if matched_servers else set(MCP_SERVERS.keys())
@@ -390,6 +400,8 @@ async def get_tools_for_query(query: str) -> tuple[list[dict], dict[str, tuple[s
             name: str = tool.get("name", "")
             if not name or name in seen_names:
                 continue
+            if tool_prefix_filter and not any(name.startswith(p) for p in tool_prefix_filter):
+                continue
             seen_names.add(name)
             openai_tools.append({
                 "type": "function",
@@ -401,7 +413,8 @@ async def get_tools_for_query(query: str) -> tuple[list[dict], dict[str, tuple[s
             })
             tool_map[name] = (server, url)
 
-    return openai_tools, tool_map
+    log.info("Tool-Router: %d Tools nach Filter bereitgestellt", len(openai_tools))
+    return openai_tools, tool_map, force_anthropic
 
 
 async def execute_mcp_tool(
@@ -444,7 +457,7 @@ _COMPLEX_RE = re.compile(
 )
 
 
-def route_model(message: str, num_user_messages: int = 1) -> str:
+def route_model(message: str, num_user_messages: int = 1, force_anthropic: bool = False) -> str:
     force = os.getenv("FORCE_BACKEND", "").lower()
     if force == "anthropic" and ANTHROPIC_API_KEY:
         return "anthropic"
@@ -452,6 +465,9 @@ def route_model(message: str, num_user_messages: int = 1) -> str:
         return "ollama"
     if not ANTHROPIC_API_KEY:
         return "ollama"
+    # Gruppen mit schreibenden Aktionen oder großen Tool-Sets brauchen Claude.
+    if force_anthropic:
+        return "anthropic"
     # Multi-turn: kurze Antworten (z.B. "Weites Feld", "ja", Präzisierungen) brauchen
     # Kontext-Kontinuität — Ollama verliert den Intent bei Follow-up-Nachrichten.
     if num_user_messages > 1:
@@ -786,7 +802,7 @@ async def health() -> dict:
     return {
         "status":      "ok",
         "service":     "sojus-core",
-        "version":     "1.2",
+        "version":     "1.3",
         "ollama":      ollama_ok,
         "anthropic":   bool(ANTHROPIC_API_KEY),
         "mcp_servers": list(MCP_SERVERS.keys()),
@@ -901,11 +917,11 @@ async def _process_normal(messages: list[dict], user_msg: str) -> str:
         if m.get("role") in ("user", "assistant"):
             full_msgs.append({"role": m["role"], "content": m.get("content", "")})
 
-    tools, tool_map = await get_tools_for_query(user_msg)
+    tools, tool_map, force_anthropic = await get_tools_for_query(user_msg)
     pending: list[dict] = []
 
     num_user_messages = sum(1 for m in messages if m.get("role") == "user")
-    backend = route_model(user_msg, num_user_messages=num_user_messages)
+    backend = route_model(user_msg, num_user_messages=num_user_messages, force_anthropic=force_anthropic)
 
     if backend == "anthropic":
         response_text = await anthropic_agent_loop(full_msgs[1:], system, tools, tool_map, pending)
