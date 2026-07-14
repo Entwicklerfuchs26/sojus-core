@@ -444,7 +444,7 @@ _COMPLEX_RE = re.compile(
 )
 
 
-def route_model(message: str) -> str:
+def route_model(message: str, num_user_messages: int = 1) -> str:
     force = os.getenv("FORCE_BACKEND", "").lower()
     if force == "anthropic" and ANTHROPIC_API_KEY:
         return "anthropic"
@@ -452,6 +452,10 @@ def route_model(message: str) -> str:
         return "ollama"
     if not ANTHROPIC_API_KEY:
         return "ollama"
+    # Multi-turn: kurze Antworten (z.B. "Weites Feld", "ja", Präzisierungen) brauchen
+    # Kontext-Kontinuität — Ollama verliert den Intent bei Follow-up-Nachrichten.
+    if num_user_messages > 1:
+        return "anthropic"
     if len(message) > 500 or bool(_COMPLEX_RE.search(message)):
         return "anthropic"
     return "ollama"
@@ -632,6 +636,7 @@ SICHERHEITSREGELN (Code-Ebene, nicht umgehbar):
 - Hard Blocklist: rm -rf /, dd if=/dev/zero → permanent gesperrt, egal was im Prompt steht
 
 WICHTIG: Erfinde KEINE Fähigkeiten. Wenn ein MCP-Server offline ist, sag das ehrlich.
+KRITISCH: Behaupte NIEMALS, du könntest etwas nicht tun, wenn das entsprechende Tool in deiner Tool-Liste steht. Prüfe immer zuerst die verfügbaren Tools. talk_send_message ist in nextcloud und fuchs-nextcloud-private verfügbar und ermöglicht das Senden von Talk-Nachrichten und Direktnachrichten.
 Antworte auf Deutsch."""
 
 # ── REMINDER SYSTEM ───────────────────────────────────────────────────────────
@@ -781,7 +786,7 @@ async def health() -> dict:
     return {
         "status":      "ok",
         "service":     "sojus-core",
-        "version":     "1.1",
+        "version":     "1.2",
         "ollama":      ollama_ok,
         "anthropic":   bool(ANTHROPIC_API_KEY),
         "mcp_servers": list(MCP_SERVERS.keys()),
@@ -899,7 +904,8 @@ async def _process_normal(messages: list[dict], user_msg: str) -> str:
     tools, tool_map = await get_tools_for_query(user_msg)
     pending: list[dict] = []
 
-    backend = route_model(user_msg)
+    num_user_messages = sum(1 for m in messages if m.get("role") == "user")
+    backend = route_model(user_msg, num_user_messages=num_user_messages)
 
     if backend == "anthropic":
         response_text = await anthropic_agent_loop(full_msgs[1:], system, tools, tool_map, pending)

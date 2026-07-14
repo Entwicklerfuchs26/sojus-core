@@ -23,8 +23,8 @@
   },
 
   "push": {
-    "keywords": ["push", "benachrichtigung", "notification", "schick mir", "sende mir",
-                 "mein handy", "iphone", "ios"],
+    "keywords": ["push", "push notification", "benachrichtigung", "notification",
+                 "mein handy", "iphone", "ios push", "ios benachrichtigung"],
     "servers": ["fuchs-homeassistant"]
   },
 
@@ -61,7 +61,9 @@
 
   "nachrichten": {
     "keywords": ["nachricht", "message", "talk", "chat", "schreib an", "sende an",
-                 "weites feld", "community", "ankündigung", "kanal"],
+                 "schick an", "schicke an", "schick eine", "sende eine",
+                 "weites feld", "community", "ankündigung", "kanal",
+                 "direktnachricht", "dm an", "talk nachricht"],
     "servers": ["nextcloud", "fuchs-nextcloud-private", "nextcloud-supplement"]
   },
 
