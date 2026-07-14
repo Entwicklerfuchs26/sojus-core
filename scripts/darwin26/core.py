@@ -802,7 +802,7 @@ async def health() -> dict:
     return {
         "status":      "ok",
         "service":     "sojus-core",
-        "version":     "1.3",
+        "version":     "1.4",
         "ollama":      ollama_ok,
         "anthropic":   bool(ANTHROPIC_API_KEY),
         "mcp_servers": list(MCP_SERVERS.keys()),

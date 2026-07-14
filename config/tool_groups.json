@@ -48,8 +48,8 @@
 
   "dateien": {
     "keywords": ["datei", "file", "ordner", "folder", "dokument", "upload", "download",
-                 "nextcloud", "cloud", "webdav", "suche datei", "erstelle ordner",
-                 "speicher", "kopier"],
+                 "webdav", "suche datei", "erstelle ordner", "speicher", "kopier",
+                 "verzeichnis", "pfad", "dateiname"],
     "servers": ["nextcloud", "fuchs-nextcloud-private"]
   },
 
