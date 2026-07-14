@@ -4,6 +4,8 @@ let
     (builtins.readFile ../scripts/darwin26/core.py);
   memory-script = pkgs.writeText "memory_mcp.py"
     (builtins.readFile ../scripts/darwin26/memory_mcp.py);
+  tool-groups = pkgs.writeText "tool_groups.json"
+    (builtins.readFile ../config/tool_groups.json);
 in {
   users.users.sojus-core = {
     isSystemUser = true;
@@ -74,6 +76,15 @@ in {
       PrivateTmp      = true;
       ReadWritePaths  = [ "/etc/sojus" ];
     };
+  };
+
+  # tool_groups.json aus dem Nix-Store in /etc/sojus/ synchronisieren.
+  # Wird bei jedem nixos-rebuild switch aktualisiert.
+  system.activationScripts.sojus-tool-groups = {
+    deps = [ "users" ];
+    text = ''
+      install -m 0644 -o sojus-core -g sojus-core ${tool-groups} /etc/sojus/tool_groups.json
+    '';
   };
 
   networking.firewall.allowedTCPPorts = [ 3001 8010 ];

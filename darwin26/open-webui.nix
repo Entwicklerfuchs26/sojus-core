@@ -16,6 +16,13 @@ in {
       SCARF_NO_ANALYTICS      = "True";
       OLLAMA_BASE_URL         = "";
       ENABLE_OLLAMA_API       = "False";
+      # Explizit setzen — DynamicUser setzt HOME normalerweise automatisch, aber
+      # manche Python-Libs rufen expanduser("~") auf bevor systemd es propagiert hat.
+      HOME                    = "/var/lib/open-webui";
+      # Korrekte öffentliche URL damit Cookies, Redirects und WebSockets stimmen
+      WEBUI_URL               = "https://${hostname}";
+      # CORS auf die eigene Domain beschränken
+      CORS_ALLOW_ORIGIN       = "https://${hostname}";
     };
   };
 

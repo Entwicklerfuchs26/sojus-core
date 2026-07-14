@@ -754,7 +754,11 @@ async def _warmup_tool_cache() -> None:
 
 # ── FASTAPI ───────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Sojus Core", version="1.1")
+app = FastAPI(title="Sojus Core", version="1.2")
+
+# Serialisiert Chat-Anfragen — verhindert Race-Condition bei Tier-2-Bestätigungen
+# (asyncio yield während Anthropic-API-Call → "ja" landet vor save_pending)
+_chat_lock = asyncio.Lock()
 
 
 @app.on_event("startup")
@@ -795,6 +799,23 @@ async def list_models() -> dict:
     }
 
 
+def _extract_user_msg(messages: list[dict]) -> str:
+    """Extrahiert den letzten User-Text — behandelt String- und Array-Content."""
+    for m in reversed(messages):
+        if m.get("role") != "user":
+            continue
+        content = m.get("content", "")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = [
+                p.get("text", "") if isinstance(p, dict) else str(p)
+                for p in content
+            ]
+            return " ".join(parts).strip()
+    return ""
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(request: Request) -> dict:
     auth = request.headers.get("Authorization", "")
@@ -806,37 +827,47 @@ async def chat_completions(request: Request) -> dict:
     if not messages:
         raise HTTPException(status_code=400, detail="Keine Nachrichten")
 
-    user_msg = next(
-        (m.get("content", "") for m in reversed(messages) if m.get("role") == "user"), ""
-    )
+    async with _chat_lock:
+        user_msg = _extract_user_msg(messages)
 
-    if check_injection(user_msg):
-        response_text = "⚠️ Prompt Injection erkannt. Ignoriert."
+        if check_injection(user_msg):
+            response_text = "⚠️ Prompt Injection erkannt. Ignoriert."
 
-    elif check_hard_block(user_msg):
-        response_text = "⛔ Diese Aktion ist permanent gesperrt."
+        elif check_hard_block(user_msg):
+            response_text = "⛔ Diese Aktion ist permanent gesperrt."
 
-    elif is_cancellation(user_msg) and load_pending():
-        clear_pending()
-        response_text = "Alright, abgebrochen."
+        elif is_cancellation(user_msg) and load_pending():
+            clear_pending()
+            response_text = "Alright, abgebrochen."
 
-    elif is_confirmation(user_msg):
-        pending = load_pending()
-        if pending:
-            max_tier = pending.get("max_tier", 2)
-            if max_tier >= 3:
-                confirm_code = pending.get("confirm_code", "")
-                if confirm_code and confirm_code in user_msg:
-                    response_text = await execute_pending(pending)
+        elif is_confirmation(user_msg):
+            pending = load_pending()
+            if pending:
+                max_tier = pending.get("max_tier", 2)
+                if max_tier >= 3:
+                    confirm_code = pending.get("confirm_code", "")
+                    if confirm_code and confirm_code in user_msg:
+                        response_text = await execute_pending(pending)
+                    else:
+                        response_text = f"❌ Falscher Code. Erwarte: `{confirm_code}`"
                 else:
-                    response_text = f"❌ Falscher Code. Erwarte: `{confirm_code}`"
+                    response_text = await execute_pending(pending)
             else:
-                response_text = await execute_pending(pending)
+                log.info("is_confirmation True aber kein Pending — %r", user_msg[:40])
+                last_assistant = next(
+                    (m.get("content", "") for m in reversed(messages) if m.get("role") == "assistant"),
+                    ""
+                )
+                if isinstance(last_assistant, str) and "Bestätigung erforderlich" in last_assistant:
+                    response_text = (
+                        "Ich hatte eine Aktion vorgemerkt, aber der Status ist verloren gegangen "
+                        "(Service-Neustart oder Timeout). Bitte stelle deine Anfrage erneut."
+                    )
+                else:
+                    response_text = await _process_normal(messages, user_msg)
+
         else:
             response_text = await _process_normal(messages, user_msg)
-
-    else:
-        response_text = await _process_normal(messages, user_msg)
 
     return {
         "id":      f"chatcmpl-{uuid.uuid4().hex[:8]}",
