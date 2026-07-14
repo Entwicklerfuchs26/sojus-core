@@ -23,6 +23,15 @@ in {
       WEBUI_URL               = "https://${hostname}";
       # CORS auf die eigene Domain beschränken
       CORS_ALLOW_ORIGIN       = "https://${hostname}";
+
+      # Audio: STT + TTS für alle User freischalten (sind schon Default, aber explizit).
+      # Engine-Wahl erfolgt im Admin-UI → "Web API" = rein browser-seitige Web Speech
+      # API / SpeechSynthesis, kein Server-Roundtrip, kein Modell-Download.
+      # Server-seitiges Whisper (faster_whisper) ist im Nix-Package nicht gebündelt.
+      USER_PERMISSIONS_CHAT_STT = "True";
+      USER_PERMISSIONS_CHAT_TTS = "True";
+      # Sprach-Hint für eventuelle spätere Server-Whisper-Aktivierung
+      WHISPER_LANGUAGE          = "de";
     };
   };
 
