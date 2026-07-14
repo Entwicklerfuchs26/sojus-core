@@ -630,8 +630,8 @@ KONTEXT:
   • "Weites Feld" (Hofgemeinschaft): nextcloud → edaphos.weites-feld.org
 
 MCP-SERVER (deine Tools — alle aktiv):
-- nextcloud            → Dateien/WebDAV, Kalender, Todos, Notes, Kontakte, Talk/Chat, Mail, Deck (Kanban), News/RSS, Tables, Polls, Forms, Announcements, Collectives (Wiki), Cookbook (Weites Feld)
-- fuchs-nextcloud-private → gleiche Tools, zweite Nextcloud-Instanz (Sternenhof, privat)
+- nextcloud            → Weites Feld (edaphos.weites-feld.org): Dateien/WebDAV, Kalender, Todos, Notes, Kontakte, Talk/Chat, Mail, Deck (Kanban), News/RSS, Tables, Polls, Forms, Announcements, Collectives (Wiki), Cookbook
+- fuchs-nextcloud-private → Sternenhof (cloud.sternenhof.space): gleiche Tools, PRIVATE Instanz — NUR nutzen wenn explizit Sternenhof genannt oder Kontext eindeutig privat
 - fuchs-homeassistant  → Smarthome: Lichter, Schalter, Sensoren, Automationen, Szenen, iOS Push-Notifications
 - fuchs-n8n            → Workflow-Automation: Workflows triggern, erstellen, verwalten
 - fuchs-jellyfin       → Medienserver: Filme/Serien suchen, Wiedergabe steuern
@@ -802,7 +802,7 @@ async def health() -> dict:
     return {
         "status":      "ok",
         "service":     "sojus-core",
-        "version":     "1.4",
+        "version":     "1.5",
         "ollama":      ollama_ok,
         "anthropic":   bool(ANTHROPIC_API_KEY),
         "mcp_servers": list(MCP_SERVERS.keys()),
