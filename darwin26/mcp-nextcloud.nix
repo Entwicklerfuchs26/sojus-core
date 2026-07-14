@@ -21,6 +21,8 @@
       HOME                 = "/var/lib/sojus-mcp";
       UV_PYTHON            = "${pkgs.python3}/bin/python3";
       UV_PYTHON_PREFERENCE = "only-system";
+      SSL_CERT_FILE        = "/etc/ssl/certs/ca-bundle.crt";
+      REQUESTS_CA_BUNDLE   = "/etc/ssl/certs/ca-bundle.crt";
       LD_LIBRARY_PATH = lib.makeLibraryPath [
         pkgs.stdenv.cc.cc.lib pkgs.zlib pkgs.openssl.out pkgs.glib
       ];
