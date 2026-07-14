@@ -2,6 +2,7 @@
 {
   imports = [
     ./secrets.nix
+    ./tools.nix
     ./sojus-core.nix
     ./open-webui.nix
     ./fuchs-discord.nix
