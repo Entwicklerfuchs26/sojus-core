@@ -1,7 +1,7 @@
 { config, pkgs, lib, ... }:
 {
   imports = [
-    # ./secrets.nix  # TODO: sops secrets.yaml zuerst befüllen, dann wieder aktivieren
+    ./secrets.nix
     ./sojus-core.nix
     ./open-webui.nix
     ./fuchs-discord.nix
