@@ -5,7 +5,8 @@
     "keywords": ["kalender", "termin", "event", "veranstaltung", "todo", "erinnerung",
                  "heute", "morgen", "nächste woche", "wann", "datum", "uhrzeit",
                  "calendar", "appointment", "meeting", "schedule", "reminder"],
-    "servers": ["nc-weites-feld", "nc-sternenhof", "fuchs-vikunja"]
+    "servers": ["nc-weites-feld", "nc-sternenhof", "fuchs-vikunja"],
+    "force_anthropic": true
   },
 
   "aufgaben": {
@@ -50,13 +51,15 @@
     "keywords": ["datei", "file", "ordner", "folder", "dokument", "upload", "download",
                  "webdav", "suche datei", "erstelle ordner", "speicher", "kopier",
                  "verzeichnis", "pfad", "dateiname"],
-    "servers": ["nc-weites-feld", "nc-sternenhof"]
+    "servers": ["nc-weites-feld", "nc-sternenhof"],
+    "force_anthropic": true
   },
 
   "notizen": {
     "keywords": ["notiz", "note", "aufschreiben", "merke", "rezept", "kochbuch",
                  "wiki", "kollektiv", "seite", "artikel"],
-    "servers": ["nc-weites-feld", "nc-sternenhof"]
+    "servers": ["nc-weites-feld", "nc-sternenhof"],
+    "force_anthropic": true
   },
 
   "nachrichten": {
@@ -107,7 +110,8 @@
   "kontakte": {
     "keywords": ["kontakt", "person", "kontaktbuch", "adressbuch", "telefonnummer",
                  "contact"],
-    "servers": ["nc-weites-feld", "nc-sternenhof"]
+    "servers": ["nc-weites-feld", "nc-sternenhof"],
+    "force_anthropic": true
   },
 
   "umfragen": {
