@@ -5,7 +5,7 @@
     "keywords": ["kalender", "termin", "event", "veranstaltung", "todo", "erinnerung",
                  "heute", "morgen", "nächste woche", "wann", "datum", "uhrzeit",
                  "calendar", "appointment", "meeting", "schedule", "reminder"],
-    "servers": ["nextcloud", "fuchs-nextcloud-private", "fuchs-vikunja"]
+    "servers": ["nc-weites-feld", "nc-sternenhof", "fuchs-vikunja"]
   },
 
   "aufgaben": {
@@ -50,13 +50,13 @@
     "keywords": ["datei", "file", "ordner", "folder", "dokument", "upload", "download",
                  "webdav", "suche datei", "erstelle ordner", "speicher", "kopier",
                  "verzeichnis", "pfad", "dateiname"],
-    "servers": ["nextcloud", "fuchs-nextcloud-private"]
+    "servers": ["nc-weites-feld", "nc-sternenhof"]
   },
 
   "notizen": {
     "keywords": ["notiz", "note", "aufschreiben", "merke", "rezept", "kochbuch",
                  "wiki", "kollektiv", "seite", "artikel"],
-    "servers": ["nextcloud", "fuchs-nextcloud-private"]
+    "servers": ["nc-weites-feld", "nc-sternenhof"]
   },
 
   "nachrichten": {
@@ -64,7 +64,7 @@
                  "schick an", "schicke an", "schick eine", "sende eine",
                  "weites feld", "community", "ankündigung", "kanal",
                  "direktnachricht", "dm an", "talk nachricht"],
-    "servers": ["nextcloud", "fuchs-nextcloud-private", "nextcloud-supplement"],
+    "servers": ["nc-weites-feld", "nc-sternenhof", "nc-weites-feld-extra"],
     "tool_prefix_filter": ["talk_", "nc_announcements_", "nc_mail_send_message", "nc_mail_list", "nc_mail_get"],
     "force_anthropic": true
   },
@@ -107,12 +107,12 @@
   "kontakte": {
     "keywords": ["kontakt", "person", "kontaktbuch", "adressbuch", "telefonnummer",
                  "contact"],
-    "servers": ["nextcloud", "fuchs-nextcloud-private"]
+    "servers": ["nc-weites-feld", "nc-sternenhof"]
   },
 
   "umfragen": {
     "keywords": ["umfrage", "poll", "abstimmung", "formulare", "form", "votes"],
-    "servers": ["nextcloud-supplement"]
+    "servers": ["nc-weites-feld-extra"]
   },
 
   "projekte": {

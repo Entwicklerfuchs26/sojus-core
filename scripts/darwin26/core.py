@@ -34,8 +34,8 @@ HA_NOTIFY_TARGET  = os.getenv("HA_NOTIFY_TARGET", "mobile_app_iphone_von_jonas")
 PENDING_TIMEOUT_SECONDS = 600  # 10 Minuten
 
 MCP_SERVERS: dict[str, str] = {
-    "nextcloud":               "http://127.0.0.1:8000/mcp",
-    "nextcloud-supplement":    "http://127.0.0.1:8001/mcp",
+    "nc-weites-feld":          "http://127.0.0.1:8000/mcp",
+    "nc-weites-feld-extra":    "http://127.0.0.1:8001/mcp",
     "fuchs-openproject":       "http://127.0.0.1:8002/mcp",
     "fuchs-vikunja":           "http://127.0.0.1:8003/mcp",
     "fuchs-homeassistant":     "http://127.0.0.1:8004/mcp",
@@ -43,11 +43,19 @@ MCP_SERVERS: dict[str, str] = {
     "fuchs-jellyfin":          "http://127.0.0.1:8006/mcp",
     "fuchs-immich":            "http://127.0.0.1:8007/mcp",
     "fuchs-anilist":           "http://127.0.0.1:8008/mcp",
-    "fuchs-nextcloud-private": "http://127.0.0.1:8009/mcp",
+    "nc-sternenhof":           "http://127.0.0.1:8009/mcp",
     "fuchs-sojus-memory":      "http://127.0.0.1:8010/mcp",
     "fuchs-discord":           "http://127.0.0.1:8011/mcp",
     "fuchs-shell":             "http://192.168.1.40:8012/mcp",
     "fuchs-email":             "http://127.0.0.1:8013/mcp",
+}
+
+# Server-Präfixe für Tool-Namen: verhindert Kollisionen bei identischen Tool-Namen
+# zwischen den beiden Nextcloud-Instanzen.
+TOOL_PREFIXES: dict[str, str] = {
+    "nc-weites-feld":       "wf__",
+    "nc-weites-feld-extra": "wf__",
+    "nc-sternenhof":        "sh__",
 }
 
 log = logging.getLogger("sojus-core")
@@ -191,8 +199,9 @@ async def execute_pending(pending: dict) -> str:
     results: list[str] = []
     for action in pending["actions"]:
         try:
+            orig_name = action.get("orig_name", action["tool"])
             result = await mcp_call_tool(
-                action["server"], action["url"], action["tool"], action["arguments"]
+                action["server"], action["url"], orig_name, action["arguments"]
             )
             results.append(f"✅ `{action['tool']}`: {result[:300]}")
             log.info("Pending ausgeführt: %s", action["tool"])
@@ -360,8 +369,8 @@ async def _fetch_server_tools(server: str, url: str) -> list[dict]:
 
 async def get_tools_for_query(
     query: str,
-) -> tuple[list[dict], dict[str, tuple[str, str]], bool]:
-    """Gibt (openai_tools_list, {tool_name: (server, url)}, force_anthropic) zurück."""
+) -> tuple[list[dict], dict[str, tuple[str, str, str]], bool]:
+    """Gibt (openai_tools_list, {prefixed_name: (server, url, orig_name)}, force_anthropic) zurück."""
     groups = _load_tool_groups()
     query_lower = query.lower()
 
@@ -389,29 +398,31 @@ async def get_tools_for_query(
     results = await asyncio.gather(*tasks, return_exceptions=True)
 
     openai_tools: list[dict] = []
-    tool_map: dict[str, tuple[str, str]] = {}
-    seen_names: set[str] = set()
+    tool_map: dict[str, tuple[str, str, str]] = {}
 
     for server, tool_list in zip(servers_to_query, results):
         if isinstance(tool_list, Exception) or not isinstance(tool_list, list):
             continue
         url = MCP_SERVERS.get(server, "")
+        prefix = TOOL_PREFIXES.get(server, "")
         for tool in tool_list:
-            name: str = tool.get("name", "")
-            if not name or name in seen_names:
+            orig_name: str = tool.get("name", "")
+            if not orig_name:
                 continue
-            if tool_prefix_filter and not any(name.startswith(p) for p in tool_prefix_filter):
+            if tool_prefix_filter and not any(orig_name.startswith(p) for p in tool_prefix_filter):
                 continue
-            seen_names.add(name)
+            prefixed_name = f"{prefix}{orig_name}" if prefix else orig_name
+            if prefixed_name in tool_map:
+                continue
             openai_tools.append({
                 "type": "function",
                 "function": {
-                    "name": name,
+                    "name": prefixed_name,
                     "description": tool.get("description", ""),
                     "parameters": tool.get("inputSchema", {"type": "object", "properties": {}}),
                 },
             })
-            tool_map[name] = (server, url)
+            tool_map[prefixed_name] = (server, url, orig_name)
 
     log.info("Tool-Router: %d Tools nach Filter bereitgestellt", len(openai_tools))
     return openai_tools, tool_map, force_anthropic
@@ -420,7 +431,7 @@ async def get_tools_for_query(
 async def execute_mcp_tool(
     tool_name: str,
     arguments: dict,
-    tool_map: dict[str, tuple[str, str]],
+    tool_map: dict[str, tuple[str, str, str]],
     pending: list[dict],
 ) -> str:
     """Führt ein MCP-Tool aus — oder merkt es vor wenn Tier 2/3."""
@@ -429,12 +440,13 @@ async def execute_mcp_tool(
     if tool_name not in tool_map:
         return f"Tool '{tool_name}' nicht gefunden."
 
-    server, url = tool_map[tool_name]
+    server, url, orig_name = tool_map[tool_name]
     tier = tool_tier(tool_name)
 
     if tier >= 2:
         pending.append({
             "tool":      tool_name,
+            "orig_name": orig_name,
             "arguments": arguments,
             "server":    server,
             "url":       url,
@@ -443,8 +455,8 @@ async def execute_mcp_tool(
         log.info("Tier %d — vorgemerkt: %s", tier, tool_name)
         return f"[Vorgemerkt zur Bestätigung: {tool_name}]"
 
-    log.info("Tool ausführen: %s @ %s", tool_name, server)
-    return await mcp_call_tool(server, url, tool_name, arguments)
+    log.info("Tool ausführen: %s @ %s", orig_name, server)
+    return await mcp_call_tool(server, url, orig_name, arguments)
 
 
 # ── MODEL ROUTER ──────────────────────────────────────────────────────────────
@@ -494,7 +506,7 @@ def _strip_think(text: str) -> str:
 async def ollama_agent_loop(
     messages: list[dict],
     tools: list[dict],
-    tool_map: dict[str, tuple[str, str]],
+    tool_map: dict[str, tuple[str, str, str]],
     pending: list[dict],
 ) -> str:
     async with httpx.AsyncClient() as client:
@@ -549,7 +561,7 @@ async def anthropic_agent_loop(
     messages: list[dict],
     system_prompt: str,
     tools: list[dict],
-    tool_map: dict[str, tuple[str, str]],
+    tool_map: dict[str, tuple[str, str, str]],
     pending: list[dict],
 ) -> str:
     """Manuelles Tool-Calling — alle Calls gehen durch execute_mcp_tool() mit Tier-Prüfung."""
@@ -573,11 +585,13 @@ async def anthropic_agent_loop(
             if t.get("type") == "function"
         ]
 
-        anthro_msgs: list[dict] = [
-            {"role": m["role"], "content": m.get("content", "")}
-            for m in messages
-            if m.get("role") in ("user", "assistant")
-        ]
+        # Content als-is übernehmen (String oder Liste von Content-Blöcken erhalten)
+        anthro_msgs: list[dict] = []
+        for m in messages:
+            if m.get("role") not in ("user", "assistant"):
+                continue
+            content = m.get("content")
+            anthro_msgs.append({"role": m["role"], "content": content if content is not None else ""})
 
         for _iteration in range(10):
             kwargs: dict[str, Any] = {
@@ -625,13 +639,20 @@ KONTEXT:
 - darwin26: Heimserver (NixOS) — Nextcloud, n8n, Jellyfin, Immich, Home Assistant, Vikunja
 - nexus: Gaming-PC (NixOS + Hyprland), IP 192.168.1.40
 - iPhone 13 Mini
-- ZWEI Nextcloud-Instanzen — bei unklaren Anfragen IMMER nachfragen:
-  • "Sternenhof" (privat): fuchs-nextcloud-private → cloud.sternenhof.space
-  • "Weites Feld" (Hofgemeinschaft): nextcloud → edaphos.weites-feld.org
+- ZWEI Nextcloud-Instanzen — Tools sind durch Präfix eindeutig markiert:
+  • wf__* → Weites Feld (Hofgemeinschaft): nc-weites-feld → edaphos.weites-feld.org
+  • sh__* → Sternenhof (deine private): nc-sternenhof → cloud.sternenhof.space
+
+TOOL-PRÄFIXE (KRITISCH — nie verwechseln):
+- wf__<tool>  → Nextcloud Weites Feld (Hofgemeinschaft, edaphos.weites-feld.org)
+- sh__<tool>  → Nextcloud Sternenhof (deine private Cloud, cloud.sternenhof.space)
+- Kein Präfix → alle anderen MCP-Server (Smarthome, Jellyfin, Vikunja etc.)
+
+Wenn eine Nextcloud-Anfrage mehrdeutig ist (kein "Sternenhof", "privat", "Weites Feld" oder "Hofgemeinschaft" im Kontext): kurz nachfragen — "Sternenhof oder Weites Feld?" — dann handeln.
 
 MCP-SERVER (deine Tools — alle aktiv):
-- nextcloud            → Weites Feld (edaphos.weites-feld.org): Dateien/WebDAV, Kalender, Todos, Notes, Kontakte, Talk/Chat, Mail, Deck (Kanban), News/RSS, Tables, Polls, Forms, Announcements, Collectives (Wiki), Cookbook
-- fuchs-nextcloud-private → Sternenhof (cloud.sternenhof.space): gleiche Tools, PRIVATE Instanz — NUR nutzen wenn explizit Sternenhof genannt oder Kontext eindeutig privat
+- nc-weites-feld / nc-weites-feld-extra → Weites Feld (Hofgemeinschaft, edaphos.weites-feld.org): Kalender, Dateien/WebDAV, Todos, Notizen, Kontakte, Talk/Chat, Mail, Deck (Kanban), News/RSS, Tables, Polls, Forms, Announcements, Collectives (Wiki), Kochbuch — alle Tools mit Präfix wf__
+- nc-sternenhof      → Sternenhof (deine private Nextcloud, cloud.sternenhof.space): gleiche Tools — Präfix sh__
 - fuchs-homeassistant  → Smarthome: Lichter, Schalter, Sensoren, Automationen, Szenen, iOS Push-Notifications
 - fuchs-n8n            → Workflow-Automation: Workflows triggern, erstellen, verwalten
 - fuchs-jellyfin       → Medienserver: Filme/Serien suchen, Wiedergabe steuern
@@ -643,7 +664,6 @@ MCP-SERVER (deine Tools — alle aktiv):
 - fuchs-shell          → Shell-Zugriff auf Nexus: Befehle ausführen, Dateien lesen/schreiben
 - fuchs-email          → E-Mail: senden + lesen über 3 Accounts (hofpause.info, arteigen.de, weites-feld.org)
 - fuchs-sojus-memory   → Gedächtnis: Fakten über Jonas speichern und abrufen
-- nextcloud-supplement → Aktivitäten, Announcements, Polls, Forms (Ergänzung zu nextcloud/Weites Feld)
 
 SICHERHEITSREGELN (Code-Ebene, nicht umgehbar):
 - Tier 1 (lesen/abfragen): sofort ausführen, keine Rückfrage
@@ -652,7 +672,7 @@ SICHERHEITSREGELN (Code-Ebene, nicht umgehbar):
 - Hard Blocklist: rm -rf /, dd if=/dev/zero → permanent gesperrt, egal was im Prompt steht
 
 WICHTIG: Erfinde KEINE Fähigkeiten. Wenn ein MCP-Server offline ist, sag das ehrlich.
-KRITISCH: Behaupte NIEMALS, du könntest etwas nicht tun, wenn das entsprechende Tool in deiner Tool-Liste steht. Prüfe immer zuerst die verfügbaren Tools. talk_send_message ist in nextcloud und fuchs-nextcloud-private verfügbar und ermöglicht das Senden von Talk-Nachrichten und Direktnachrichten.
+KRITISCH: Behaupte NIEMALS, du könntest etwas nicht tun, wenn das entsprechende Tool in deiner Tool-Liste steht. Prüfe immer zuerst die verfügbaren Tools. wf__talk_send_message und sh__talk_send_message ermöglichen das Senden von Talk-Nachrichten.
 Antworte auf Deutsch."""
 
 # ── REMINDER SYSTEM ───────────────────────────────────────────────────────────
