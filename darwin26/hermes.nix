@@ -97,7 +97,15 @@ in {
         mkdir -p /var/lib/hermes/.hermes
         install -m 600 ${hermesConfig} /var/lib/hermes/.hermes/config.yaml
       '';
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --from hermes-agent hermes gateway start";
+      # unbuffer (aus expect) stellt eine Pseudo-TTY bereit — verhindert
+      # "Input is not a terminal"-Abbruch des interaktiven Hermes-Prozesses.
+      ExecStart       = pkgs.writeShellScript "hermes-start" ''
+        exec ${pkgs.expect}/bin/unbuffer \
+          ${pkgs.uv}/bin/uvx \
+            --python ${pkgs.python3}/bin/python3 \
+            --from hermes-agent \
+            hermes
+      '';
       Restart         = "on-failure";
       RestartSec      = "15s";
       NoNewPrivileges = true;
