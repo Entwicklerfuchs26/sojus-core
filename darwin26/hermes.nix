@@ -81,8 +81,9 @@ in {
 
     environment = {
       HOME                 = "/var/lib/hermes";
-      # HERMES_HOME NICHT setzen — Hermes sucht Config dann korrekt unter
-      # $HOME/.hermes/config.yaml = /var/lib/hermes/.hermes/config.yaml
+      # HERMES_HOME zeigt auf das .hermes-Verzeichnis selbst (nicht dessen Parent).
+      # _load_gateway_config() liest $HERMES_HOME/config.yaml für MCP-Server.
+      HERMES_HOME          = "/var/lib/hermes/.hermes";
       UV_PYTHON            = "${pkgs.python3}/bin/python3";
       UV_PYTHON_PREFERENCE = "only-system";
       UV_CACHE_DIR         = "/var/lib/hermes/.cache/uv";
