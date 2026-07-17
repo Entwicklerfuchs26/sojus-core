@@ -123,5 +123,69 @@
     "keywords": ["openproject", "projekt management", "arbeitspaket", "meilenstein",
                  "zeiterfassung", "time entry", "issue", "bug"],
     "servers": ["fuchs-openproject"]
+  },
+
+  "browser": {
+    "keywords": ["browser", "tab", "vivaldi", "webseite", "url", "link", "öffne seite",
+                 "screenshot browser", "javascript", "js ausführen", "navigate",
+                 "webseite öffnen", "klick", "webbrowser"],
+    "servers": ["fuchs-mcp-vivaldi"]
+  },
+
+  "fenster": {
+    "keywords": ["fenster", "window", "workspace", "hyprland", "monitor", "bildschirm",
+                 "fokus wechseln", "verschieb fenster", "minimier", "keybinding",
+                 "hyprctl", "dispatch"],
+    "servers": ["fuchs-mcp-hyprland"]
+  },
+
+  "streaming": {
+    "keywords": ["obs", "aufnahme", "recording", "stream starten", "streaming",
+                 "aufnehmen", "stopp aufnahme", "stopp stream"],
+    "servers": ["fuchs-mcp-obs"]
+  },
+
+  "3d": {
+    "keywords": ["blender", "3d", "mesh", "render blender", "szene blender",
+                 "freecad", "cad", "konstruktion", "bauteil", "skizze", "3d modell"],
+    "servers": ["fuchs-mcp-blender", "fuchs-mcp-freecad"]
+  },
+
+  "planetarium": {
+    "keywords": ["stellarium", "sterne", "planet", "himmel", "astronomie", "teleskop",
+                 "konstellation", "mond", "mars", "venus", "jupiter", "saturn",
+                 "sternenhimmel", "deep sky"],
+    "servers": ["fuchs-mcp-stellarium"]
+  },
+
+  "video": {
+    "keywords": ["handbrake", "encode", "transkodier", "konvertier video", "preset",
+                 "h264", "h265", "mkv", "mp4", "komprimier video", "video umwandeln"],
+    "servers": ["fuchs-mcp-handbrake"]
+  },
+
+  "laser": {
+    "keywords": ["lightburn", "laser", "gravur", "schneiden", "lasercutter",
+                 "gravieren", "lasercut", "laser projekt"],
+    "servers": ["fuchs-mcp-lightburn"]
+  },
+
+  "bildbearbeitung": {
+    "keywords": ["darktable", "raw", "entwickeln", "belichtung", "raw entwickeln",
+                 "filmrolle", "foto entwickeln", "stil anwenden", "darktable export"],
+    "servers": ["fuchs-mcp-darktable"]
+  },
+
+  "libreoffice": {
+    "keywords": ["libreoffice", "writer", "dokument bearbeiten", "text einfügen",
+                 "kommentar writer", "änderungen verfolgen", "track changes writer"],
+    "servers": ["fuchs-mcp-libreoffice"]
+  },
+
+  "filesystem": {
+    "keywords": ["lies datei", "zeig datei", "öffne datei", "lese file", "dateiinhalt",
+                 "nexus datei", "lokale datei", "home ordner", "verzeichnis nexus",
+                 "read file", "list directory", "suche nexus"],
+    "servers": ["fuchs-mcp-filesystem"]
   }
 }

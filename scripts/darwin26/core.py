@@ -48,6 +48,20 @@ MCP_SERVERS: dict[str, str] = {
     "fuchs-discord":           "http://127.0.0.1:8011/mcp",
     "fuchs-shell":             "http://192.168.1.40:8012/mcp",
     "fuchs-email":             "http://127.0.0.1:8013/mcp",
+    # ── Nexus (fastmcp — /mcp) ────────────────────────────────────────────────
+    "fuchs-mcp-hyprland":      "http://192.168.1.40:9001/mcp",
+    "fuchs-mcp-vivaldi":       "http://192.168.1.40:9002/mcp",
+    "fuchs-mcp-libreoffice":   "http://192.168.1.40:9004/mcp",
+    "fuchs-mcp-stellarium":    "http://192.168.1.40:9008/mcp",
+    "fuchs-mcp-handbrake":     "http://192.168.1.40:9009/mcp",
+    "fuchs-mcp-lightburn":     "http://192.168.1.40:9010/mcp",
+    "fuchs-mcp-darktable":     "http://192.168.1.40:9011/mcp",
+    # ── Nexus (mcp-proxy — /servers/NAME/mcp, nur wenn App läuft) ────────────
+    "fuchs-mcp-obs":           "http://192.168.1.40:9003/servers/obs/mcp",
+    "fuchs-mcp-freecad":       "http://192.168.1.40:9005/servers/freecad/mcp",
+    "fuchs-mcp-blender":       "http://192.168.1.40:9007/servers/blender/mcp",
+    # ── Nexus Dateisystem (mcp-proxy, immer verfügbar, read-only via ACL) ────
+    "fuchs-mcp-filesystem":    "http://192.168.1.40:9000/servers/filesystem/mcp",
 }
 
 # Server-Präfixe für Tool-Namen: verhindert Kollisionen bei identischen Tool-Namen
@@ -109,6 +123,53 @@ def is_cancellation(text: str) -> bool:
 
 _tool_tiers_cache: dict = {}
 
+_TIER3_VERBS = frozenset({
+    "delete", "remove", "purge", "destroy", "trash", "wipe", "erase", "drop",
+})
+_TIER2_VERBS = frozenset({
+    "create", "update", "write", "send", "post", "set", "add", "insert",
+    "edit", "modify", "upload", "toggle", "activate", "enable", "disable",
+    "trigger", "fire", "turn", "start", "stop", "pause", "play",
+    "restart", "reload", "run", "execute", "dispatch", "save", "append",
+    "import", "export", "encode", "render", "move", "copy", "archive",
+    "restore", "unarchive", "reorder", "assign", "unassign", "attach",
+    "detach", "follow", "mark", "vote", "favorite", "favourite",
+    "click", "navigate", "close", "evaluate", "new", "focus", "notify",
+    "deactivate", "bulk", "reindex", "manage", "complete", "announce",
+    "invite", "batch", "open", "like",
+})
+
+_EXEC_READONLY_CMDS = frozenset({
+    "ls", "ll", "la", "cat", "head", "tail", "grep", "find", "locate",
+    "df", "du", "free", "ps", "uptime", "who", "whoami", "pwd", "echo",
+    "env", "printenv", "date", "cal", "id", "groups", "uname", "hostname",
+    "journalctl", "dmesg", "lsblk", "lsusb", "lspci", "lscpu",
+    "ip", "nmcli", "netstat", "ss", "systemctl",
+})
+_EXEC_TIER3_RE = re.compile(
+    r"\bpoweroff\b|\bshutdown\b|\breboot\b"
+    r"|\bnixos-rebuild\b"
+    r"|\bsystemctl\s+(stop|restart|disable|mask)\b"
+    r"|\brm\s+-[rRfF]*[fF]\b"
+    r"|\bmkfs\b|\bdd\s+if=",
+    re.IGNORECASE,
+)
+_EXEC_CHAIN_RE = re.compile(r"&&|\|\||;")
+
+
+def _execute_command_tier(arguments: dict) -> int:
+    cmd = str(arguments.get("command", arguments.get("cmd", ""))).strip()
+    if not cmd:
+        return 2
+    if _EXEC_TIER3_RE.search(cmd):
+        return 3
+    if _EXEC_CHAIN_RE.search(cmd):
+        return 3
+    first = cmd.split()[0] if cmd.split() else ""
+    if first in _EXEC_READONLY_CMDS:
+        return 1
+    return 2
+
 
 def _load_tool_tiers() -> dict:
     global _tool_tiers_cache
@@ -121,17 +182,26 @@ def _load_tool_tiers() -> dict:
     return _tool_tiers_cache
 
 
+def _auto_classify_tier(tool_name: str) -> int:
+    tokens = set(tool_name.lower().split("_"))
+    if tokens & _TIER3_VERBS:
+        return 3
+    if tokens & _TIER2_VERBS:
+        return 2
+    return 1
+
+
 def tool_tier(tool_name: str) -> int:
     """Gibt Sicherheits-Tier zurück: 1=lesen, 2=schreibend, 3=destruktiv/Shell-Execute."""
     tiers = _load_tool_tiers()
     name = tool_name.lower()
-    for pattern in tiers.get("tier3_patterns", []):
-        if pattern.lower() in name:
-            return 3
-    for pattern in tiers.get("tier2_patterns", []):
-        if pattern.lower() in name:
+    overrides: dict = tiers.get("overrides", {})
+    if name in overrides:
+        val = overrides[name]
+        if val == "content_based":
             return 2
-    return 1
+        return int(val)
+    return _auto_classify_tier(name)
 
 
 # ── PENDING CONFIRMATION SYSTEM ───────────────────────────────────────────────
@@ -441,7 +511,10 @@ async def execute_mcp_tool(
         return f"Tool '{tool_name}' nicht gefunden."
 
     server, url, orig_name = tool_map[tool_name]
-    tier = tool_tier(tool_name)
+    if tool_name == "execute_command":
+        tier = _execute_command_tier(arguments)
+    else:
+        tier = tool_tier(tool_name)
 
     if tier >= 2:
         pending.append({
@@ -664,6 +737,17 @@ MCP-SERVER (deine Tools — alle aktiv):
 - fuchs-shell          → Shell-Zugriff auf Nexus: Befehle ausführen, Dateien lesen/schreiben
 - fuchs-email          → E-Mail: senden + lesen über 3 Accounts (hofpause.info, arteigen.de, weites-feld.org)
 - fuchs-sojus-memory   → Gedächtnis: Fakten über Jonas speichern und abrufen
+- fuchs-mcp-hyprland   → Hyprland-Fenstermanager: Workspaces, Fenster, Monitore, Keybindings, Config-Reload
+- fuchs-mcp-vivaldi    → Browser-Steuerung (Nexus): Tabs, Navigation, JS-Ausführung, Screenshots
+- fuchs-mcp-stellarium → Stellarium Planetarium: Objekte fokussieren, Zeit setzen, Himmel anzeigen
+- fuchs-mcp-handbrake  → HandBrake Video-Encoding: Encode-Jobs starten, Presets, Scan
+- fuchs-mcp-lightburn  → LightBurn Laser-Projekte: Öffnen, Suchen, Gerätestatus
+- fuchs-mcp-darktable  → Darktable Fotobibliothek: Film-Rolls, Styles, Export
+- fuchs-mcp-libreoffice → LibreOffice Writer: Dokument lesen/bearbeiten (nur wenn LibreOffice läuft)
+- fuchs-mcp-obs        → OBS Streaming/Aufnahme (nur wenn OBS läuft)
+- fuchs-mcp-freecad    → FreeCAD CAD-Modellierung (nur wenn FreeCAD läuft)
+- fuchs-mcp-blender    → Blender 3D-Modellierung (nur wenn Blender läuft)
+- fuchs-mcp-filesystem → Dateisystem Nexus: /home/fuchs lesen (read-only via ACL, immer verfügbar)
 
 SICHERHEITSREGELN (Code-Ebene, nicht umgehbar):
 - Tier 1 (lesen/abfragen): sofort ausführen, keine Rückfrage

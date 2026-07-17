@@ -6,6 +6,8 @@ let
     (builtins.readFile ../scripts/darwin26/memory_mcp.py);
   tool-groups = pkgs.writeText "tool_groups.json"
     (builtins.readFile ../config/tool_groups.json);
+  tool-tiers = pkgs.writeText "tool_tiers.json"
+    (builtins.readFile ../config/tool_tiers.json);
 in {
   users.users.sojus-core = {
     isSystemUser = true;
@@ -32,6 +34,7 @@ in {
       MEMORY_FILE      = "/etc/sojus/memory.json";
       REMINDERS_FILE   = "/etc/sojus/reminders.json";
       TOOL_GROUPS_FILE = "/etc/sojus/tool_groups.json";
+      TOOL_TIERS_FILE  = "/etc/sojus/tool_tiers.json";
     };
 
     serviceConfig = {
@@ -78,12 +81,13 @@ in {
     };
   };
 
-  # tool_groups.json aus dem Nix-Store in /etc/sojus/ synchronisieren.
+  # Konfig-JSONs aus dem Nix-Store in /etc/sojus/ synchronisieren.
   # Wird bei jedem nixos-rebuild switch aktualisiert.
   system.activationScripts.sojus-tool-groups = {
     deps = [ "users" ];
     text = ''
       install -m 0644 -o sojus-core -g sojus-core ${tool-groups} /etc/sojus/tool_groups.json
+      install -m 0644 -o sojus-core -g sojus-core ${tool-tiers} /etc/sojus/tool_tiers.json
     '';
   };
 
