@@ -4,6 +4,7 @@
     ./secrets.nix
     ./tools.nix
     ./sojus-core.nix
+    ./hermes.nix
     ./open-webui.nix
     ./fuchs-discord.nix
     ./fuchs-email.nix
