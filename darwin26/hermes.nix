@@ -6,9 +6,9 @@ let
   hermesApiKey = "hermes-internal-key-change-in-prod";
 
   hermesConfig = pkgs.writeText "hermes-config.yaml" ''
-    # Modell und Provider kommen aus Env-Vars (HERMES_MODEL, HERMES_PROVIDER)
-    # platform_toolsets.api_server ist kein gültiger Key — MCP-Tools werden
-    # automatisch registriert sobald mcp_servers definiert sind.
+    model:
+      default: "claude-sonnet-4-6"
+      provider: "anthropic"
 
     # Alle Darwin26-MCP-Server als HTTP-Endpoints
     mcp_servers:
