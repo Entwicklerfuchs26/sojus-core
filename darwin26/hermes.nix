@@ -71,6 +71,7 @@ in {
 
     environment = {
       HOME                 = "/var/lib/hermes";
+      HERMES_HOME          = "/var/lib/hermes";
       UV_PYTHON            = "${pkgs.python3}/bin/python3";
       UV_PYTHON_PREFERENCE = "only-system";
       UV_CACHE_DIR         = "/var/lib/hermes/.cache/uv";
