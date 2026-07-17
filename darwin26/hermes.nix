@@ -97,13 +97,12 @@ in {
         mkdir -p /var/lib/hermes/.hermes
         install -m 600 ${hermesConfig} /var/lib/hermes/.hermes/config.yaml
       '';
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --from hermes-agent hermes";
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --from hermes-agent hermes gateway start";
       Restart         = "on-failure";
       RestartSec      = "15s";
       NoNewPrivileges = true;
       PrivateTmp      = true;
       ReadWritePaths  = [ "/var/lib/hermes" ];
-      StandardInput   = "null";
     };
   };
 
