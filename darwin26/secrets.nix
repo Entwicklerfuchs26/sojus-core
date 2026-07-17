@@ -107,10 +107,11 @@
     };
 
     # Open WebUI: WEBUI_SECRET_KEY (and other OpenWebUI env vars)
+    # DynamicUser → user doesn't exist at activation time; root owns EnvironmentFile (systemd reads it as root)
     "sojus/open-webui" = {
       path  = "/etc/sojus/open-webui.env";
-      owner = "open-webui";
-      group = "open-webui";
+      owner = "root";
+      group = "root";
       mode  = "0400";
     };
   };
