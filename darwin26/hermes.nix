@@ -10,6 +10,25 @@ let
       default: "claude-sonnet-4-6"
       provider: "anthropic"
 
+    # MCP-Server explizit für api_server freigeben (direkte Namen-Liste)
+    # hermes-api-server = Built-in Composite (file, web, code etc.)
+    platform_toolsets:
+      api_server:
+        - hermes-api-server
+        - nc-weites-feld
+        - nc-weites-feld-extra
+        - fuchs-openproject
+        - fuchs-vikunja
+        - fuchs-homeassistant
+        - fuchs-n8n
+        - fuchs-jellyfin
+        - fuchs-immich
+        - fuchs-anilist
+        - nc-sternenhof
+        - fuchs-sojus-memory
+        - fuchs-discord
+        - fuchs-email
+
     # Alle Darwin26-MCP-Server als HTTP-Endpoints
     mcp_servers:
       nc-weites-feld:
