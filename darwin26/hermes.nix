@@ -25,7 +25,6 @@ let
         - fuchs-immich
         - fuchs-anilist
         - nc-sternenhof
-        - fuchs-sojus-memory
         - fuchs-discord
         - fuchs-email
 
@@ -51,8 +50,6 @@ let
         url: "http://127.0.0.1:8008/mcp"
       nc-sternenhof:
         url: "http://127.0.0.1:8009/mcp"
-      fuchs-sojus-memory:
-        url: "http://127.0.0.1:8010/mcp"
       fuchs-discord:
         url: "http://127.0.0.1:8011/mcp"
       fuchs-email:
@@ -109,9 +106,6 @@ in {
       ExecStartPre    = pkgs.writeShellScript "hermes-setup" ''
         mkdir -p /var/lib/hermes/.hermes
         install -m 600 ${hermesConfig} /var/lib/hermes/.hermes/config.yaml
-        echo "=== Hermes Config installiert aus: ${hermesConfig} ===" >&2
-        cat /var/lib/hermes/.hermes/config.yaml >&2
-        echo "=== Config-Ende ===" >&2
       '';
       # Direkt das Python-Modul starten — bypass aller CLI-Checks (gateway install etc.).
       # Das ist exakt der ExecStart den "hermes gateway install --system" schreiben würde.
