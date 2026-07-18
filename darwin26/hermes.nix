@@ -7,8 +7,12 @@ let
 
   hermesConfig = pkgs.writeText "hermes-config.yaml" ''
     model:
-      default: "claude-sonnet-4-6"
+      default: "claude-haiku-4-5-20251001"
       provider: "anthropic"
+
+    tool_search:
+      enabled: true
+      mode: auto
 
     # MCP-Server explizit für api_server freigeben (direkte Namen-Liste)
     # hermes-api-server = Built-in Composite (file, web, code etc.)
@@ -145,7 +149,7 @@ in {
       API_SERVER_KEY       = hermesApiKey;
       # Provider
       HERMES_PROVIDER      = "anthropic";
-      HERMES_MODEL         = "anthropic/claude-sonnet-4-6";
+      HERMES_MODEL         = "anthropic/claude-haiku-4-5-20251001";
     };
 
     serviceConfig = {
