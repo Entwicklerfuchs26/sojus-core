@@ -15,6 +15,7 @@ let
     platform_toolsets:
       api_server:
         - hermes-api-server
+        # Darwin26
         - nc-weites-feld
         - nc-weites-feld-extra
         - fuchs-openproject
@@ -27,8 +28,21 @@ let
         - nc-sternenhof
         - fuchs-discord
         - fuchs-email
+        # Nexus (192.168.1.40) — optional, nur wenn App läuft
+        - fuchs-filesystem
+        - fuchs-darktable
+        - fuchs-handbrake
+        - fuchs-hyprland
+        - fuchs-vivaldi
+        - fuchs-obs
+        - fuchs-libreoffice
+        - fuchs-freecad
+        - fuchs-davinci
+        - fuchs-blender
+        - fuchs-stellarium
+        - fuchs-lightburn
 
-    # Alle Darwin26-MCP-Server als HTTP-Endpoints
+    # Darwin26-MCP-Server (127.0.0.1)
     mcp_servers:
       nc-weites-feld:
         url: "http://127.0.0.1:8000/mcp"
@@ -54,6 +68,43 @@ let
         url: "http://127.0.0.1:8011/mcp"
       fuchs-email:
         url: "http://127.0.0.1:8013/mcp"
+      # Nexus-Server (192.168.1.40) — connect_timeout kurz, da app-abhängig
+      fuchs-filesystem:
+        url: "http://192.168.1.40:9000/mcp"
+        connect_timeout: 5
+      fuchs-hyprland:
+        url: "http://192.168.1.40:9001/mcp"
+        connect_timeout: 5
+      fuchs-vivaldi:
+        url: "http://192.168.1.40:9002/mcp"
+        connect_timeout: 5
+      fuchs-obs:
+        url: "http://192.168.1.40:9003/mcp"
+        connect_timeout: 5
+      fuchs-libreoffice:
+        url: "http://192.168.1.40:9004/mcp"
+        connect_timeout: 5
+      fuchs-freecad:
+        url: "http://192.168.1.40:9005/mcp"
+        connect_timeout: 5
+      fuchs-davinci:
+        url: "http://192.168.1.40:9006/mcp"
+        connect_timeout: 5
+      fuchs-blender:
+        url: "http://192.168.1.40:9007/mcp"
+        connect_timeout: 5
+      fuchs-stellarium:
+        url: "http://192.168.1.40:9008/mcp"
+        connect_timeout: 5
+      fuchs-handbrake:
+        url: "http://192.168.1.40:9009/mcp"
+        connect_timeout: 5
+      fuchs-lightburn:
+        url: "http://192.168.1.40:9010/mcp"
+        connect_timeout: 5
+      fuchs-darktable:
+        url: "http://192.168.1.40:9011/mcp"
+        connect_timeout: 5
 
     platforms:
       api_server:
