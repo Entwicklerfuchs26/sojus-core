@@ -5,6 +5,8 @@ let
   # Testschlüssel — für Produktion: in agenix-Secret auslagern
   hermesApiKey = "hermes-internal-key-change-in-prod";
 
+  hermesSoul = pkgs.writeText "hermes-SOUL.md" (builtins.readFile ./hermes-SOUL.md);
+
   hermesConfig = pkgs.writeText "hermes-config.yaml" ''
     model:
       default: "claude-haiku-4-5-20251001"
@@ -161,6 +163,7 @@ in {
       ExecStartPre    = pkgs.writeShellScript "hermes-setup" ''
         mkdir -p /var/lib/hermes/.hermes
         install -m 600 ${hermesConfig} /var/lib/hermes/.hermes/config.yaml
+        install -n -m 600 ${hermesSoul} /var/lib/hermes/.hermes/SOUL.md
       '';
       # Direkt das Python-Modul starten — bypass aller CLI-Checks (gateway install etc.).
       # Das ist exakt der ExecStart den "hermes gateway install --system" schreiben würde.
