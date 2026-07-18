@@ -115,7 +115,7 @@ in {
       '';
       # Direkt das Python-Modul starten — bypass aller CLI-Checks (gateway install etc.).
       # Das ist exakt der ExecStart den "hermes gateway install --system" schreiben würde.
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --from 'hermes-agent[mcp]' python -m hermes_cli.main gateway run";
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --from 'hermes-agent[mcp]' --with aiohttp python -m hermes_cli.main gateway run";
       Restart         = "on-failure";
       RestartSec      = "15s";
       NoNewPrivileges = true;
