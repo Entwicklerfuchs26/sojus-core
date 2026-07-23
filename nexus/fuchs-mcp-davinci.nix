@@ -4,13 +4,22 @@ let
   port = 9006;
 
   # DaVinci Resolve Scripting-Pfad wird dynamisch zur Laufzeit per find ermittelt,
-  # da der Nix-Store-Hash sich bei Updates ändert.
+  # da der Nix-Store-Hash sich bei Updates ändert. Store enthaelt pro Version
+  # mehrere Pfade (Haupt-Derivation, -bwrap, -fhsenv-profile, -fhsenv-rootfs,
+  # -init) mit zufaelligem Hash-Praefix - "sort | tail -1" sortiert nach Hash
+  # statt nach Inhalt und trifft dadurch oft einen Pfad ohne Scripting-Modul.
+  # Deshalb hier jeden Kandidaten direkt auf die Datei pruefen statt den
+  # Verzeichnisnamen zu erraten.
   startScript = pkgs.writeShellScript "start-fuchs-mcp-davinci" ''
-    RESOLVE=$(find /nix/store -maxdepth 1 -name "*-davinci-resolve-[0-9]*" \
-      ! -name "*-bwrap" 2>/dev/null | sort | tail -1)
+    RESOLVE=$(
+      for d in $(find /nix/store -maxdepth 1 -type d -name "*-davinci-resolve-[0-9]*" 2>/dev/null); do
+        [ -f "$d/Developer/Scripting/Modules/DaVinciResolveScript.py" ] || continue
+        ver=$(basename "$d" | sed -E 's/.*-davinci-resolve-([0-9.]+).*/\1/')
+        echo "$ver $d"
+      done | sort -V | tail -1 | cut -d' ' -f2-
+    )
 
-    if [ -z "$RESOLVE" ] || \
-       [ ! -f "$RESOLVE/Developer/Scripting/Modules/DaVinciResolveScript.py" ]; then
+    if [ -z "$RESOLVE" ]; then
       echo "DaVinci Resolve Scripting-Module nicht gefunden in Nix-Store" >&2
       echo "Service pausiert bis DaVinci Resolve installiert ist." >&2
       exit 1
