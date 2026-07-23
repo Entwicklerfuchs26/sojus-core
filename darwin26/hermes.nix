@@ -163,7 +163,7 @@ in {
       ExecStartPre    = pkgs.writeShellScript "hermes-setup" ''
         mkdir -p /var/lib/hermes/.hermes
         install -m 600 ${hermesConfig} /var/lib/hermes/.hermes/config.yaml
-        install -n -m 600 ${hermesSoul} /var/lib/hermes/.hermes/SOUL.md
+        [ -e /var/lib/hermes/.hermes/SOUL.md ] || install -m 600 ${hermesSoul} /var/lib/hermes/.hermes/SOUL.md
       '';
       # Direkt das Python-Modul starten — bypass aller CLI-Checks (gateway install etc.).
       # Das ist exakt der ExecStart den "hermes gateway install --system" schreiben würde.
