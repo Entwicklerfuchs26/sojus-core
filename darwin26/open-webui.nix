@@ -1,7 +1,8 @@
 { config, pkgs, lib, ... }:
 let
   hostname      = "sojus.sternenhof.space";
-  # Aktiver Backend-Endpunkt — wechseln zwischen Sojus Core (3001) und Hermes (3002)
+  # Hermes ist die einzige Agent-Engine seit der Archivierung von Sojus Core
+  # (archive/sojus-core-legacy/, Port 3001 gibt es nicht mehr).
   activeBackend = "http://127.0.0.1:3002/v1";
   activeApiKey  = "hermes-internal-key-change-in-prod";
 in {
@@ -12,7 +13,6 @@ in {
     environmentFile = "/etc/sojus/open-webui.env";
     environment = {
       # OpenAI-kompatibler Backend — zeigt auf Hermes (Port 3002)
-      # Für Sojus Core zurückschalten: activeBackend = "http://127.0.0.1:3001/v1", Key = "sojus-pipeline-key"
       OPENAI_API_BASE_URL  = activeBackend;
       OPENAI_API_KEY       = activeApiKey;
       ENABLE_OPENAI_API    = "True";

@@ -9,11 +9,13 @@
 # Then run: sudo nixos-rebuild switch --flake /etc/nixos#darwin26
 {
   sops.secrets = {
-    # sojus-core: ANTHROPIC_API_KEY, PIPELINE_API_KEY, HA_TOKEN
+    # ANTHROPIC_API_KEY, PIPELINE_API_KEY, HA_TOKEN — von hermes-agent per EnvironmentFile gelesen.
+    # owner=root: der sojus-core User existiert seit dem Archivieren des Legacy-Agents (archive/sojus-core-legacy/)
+    # nicht mehr; root reicht, da systemd EnvironmentFile= immer als root (PID1) gelesen wird.
     "sojus/config" = {
       path  = "/etc/sojus/config.env";
-      owner = "sojus-core";
-      group = "sojus-core";
+      owner = "root";
+      group = "root";
       mode  = "0400";
     };
 
