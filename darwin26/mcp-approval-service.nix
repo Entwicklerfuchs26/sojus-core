@@ -25,6 +25,11 @@ in {
     wantedBy    = [ "multi-user.target" ];
 
     environment = {
+      # Ohne HOME kann uvx seinen Cache nicht anlegen und bricht sofort mit
+      # exit code 2 ab ("Failed to initialize cache") — lokal reproduziert.
+      HOME         = "/var/lib/mcp-approval";
+      UV_CACHE_DIR = "/var/lib/mcp-approval/.cache/uv";
+
       APPROVAL_API_TOKEN   = approvalApiToken;
       APPROVAL_DB_PATH     = "/var/lib/mcp-approval/approvals.db";
       APPROVAL_TTL_SECONDS = "300";
