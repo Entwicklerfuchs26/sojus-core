@@ -133,6 +133,10 @@ in {
     wants       = [ "network-online.target" ];
     wantedBy    = [ "multi-user.target" ];
 
+    # jq/python3 fehlen im System-Profil (/run/current-system/sw/bin) — Hermes' Terminal-Tool
+    # braucht beide für Shell-Kommandos, die es selbst ausführt.
+    path = [ pkgs.jq pkgs.python3 ];
+
     environment = {
       HOME                 = "/var/lib/hermes";
       # HERMES_HOME zeigt auf das .hermes-Verzeichnis selbst (nicht dessen Parent).
