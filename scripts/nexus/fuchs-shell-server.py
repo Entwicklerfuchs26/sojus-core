@@ -4,8 +4,18 @@
 Vorher lag die Tier-Klassifizierung + Bestätigungspflicht für gefährliche Befehle
 in sojus-core/core.py (chat-basiertes "ja"/Zufallscode-System). core.py wurde mit
 der Hermes-Migration archiviert (archive/sojus-core-legacy/) — die Absicherung
-ist deshalb hier selbst eingebaut (Tier-Logik 1:1 aus core.py übernommen), damit
-Hermes nicht ungeschützt auf Nexus shellen kann.
+ist deshalb hier selbst eingebaut, damit Hermes nicht ungeschützt auf Nexus shellen
+kann.
+
+Wichtig — Hermes hat ein eigenes, ausgereifteres Approval-System (approvals.mode:
+smart/manual/off, LLM-Risikoeinschätzung, siehe hermes-agent.nousresearch.com/docs/
+user-guide/security), aber laut Doku greift das NUR für Hermes' eigenes natives
+terminal-Tool, explizit NICHT für MCP-Server ("MCP tools themselves do not pass
+through the dangerous-command approval gate"). Und selbst fürs native Tool braucht
+es einen interaktiven Kanal (CLI/Messaging-Platform) — auf der api_server-Plattform
+(unser Setup, Open WebUI) gibt es den nicht. Deshalb: eigene Absicherung hier, mit
+Mustern aus Hermes' dokumentierter Blockliste übernommen wo sinnvoll (Recherche
+2026-07-29).
 
 Tier 1 (lesend)      → läuft sofort.
 Tier 2 (schreibend)  → läuft sofort, wird aber laut (WARNING) geloggt.
@@ -64,11 +74,19 @@ mcp = FastMCP(
 )
 
 # ── Hard-Blacklist — greift immer, unabhängig von Tier/Token ─────────────────
+# Basis aus archive/sojus-core-legacy/core.py, erweitert um Muster aus Hermes'
+# eigener (dokumentierter) Approval-Blockliste — die gilt aber nur für Hermes'
+# natives terminal-Tool, NICHT für MCP-Server wie diesen hier, siehe README-
+# Hinweis unten. Deshalb hier übernommen statt sich drauf zu verlassen.
 _HARD_BLOCK_RE = re.compile(
     r"rm\s+-[rRfF]*f\s+/"
     r"|dd\s+if=/dev/(zero|random).*of=/dev/"
     r"|mkfs\."
-    r"|:\(\)\{.*:\|:",
+    r"|:\(\)\{.*:\|:"
+    r"|kill\s+-9\s+-1\b"                      # alle Prozesse killen
+    r"|\|\s*(sh|bash|zsh)\b"                  # curl ... | sh
+    r"|bash\s*<\(\s*curl"                     # bash <(curl ...)
+    r"|wget\s+-O-.*\|\s*(sh|bash)",           # wget -O- | sh
     re.IGNORECASE | re.DOTALL,
 )
 
@@ -77,13 +95,19 @@ def _hard_blocked(cmd: str) -> bool:
     return bool(_HARD_BLOCK_RE.search(cmd))
 
 
-# ── Tier-Klassifizierung — 1:1 aus archive/sojus-core-legacy/core.py portiert ─
+# ── Tier-Klassifizierung — Basis aus core.py, plus Muster aus Hermes' Blockliste ─
 _TIER3_CMD_RE = re.compile(
     r"\bpoweroff\b|\bshutdown\b|\breboot\b"
     r"|\bnixos-rebuild\b"
     r"|\bsystemctl\s+(stop|restart|disable|mask)\b"
     r"|\brm\s+-[rRfF]*[fF]\b"
-    r"|\bmkfs\b|\bdd\s+if=",
+    r"|\bmkfs\b|\bdd\s+if="
+    r"|\bDROP\s+TABLE\b|\bTRUNCATE\s+TABLE\b|\bDELETE\s+FROM\b"
+    r"|\bchmod\s+-R\s+(000|777)\b|\bchown\s+-R\s+root\b"
+    r"|>\s*/etc/\S"
+    r"|\bpkill\s+-9\b|\bkill\s+-9\b"
+    r"|\bdocker\s+(stop|kill|restart)\b"
+    r"|>\s*/dev/sd",
     re.IGNORECASE,
 )
 _CHAIN_RE = re.compile(r"&&|\|\||;")
