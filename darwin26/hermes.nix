@@ -47,6 +47,7 @@ let
         - fuchs-blender
         - fuchs-stellarium
         - fuchs-lightburn
+        - fuchs-shell
 
     # Darwin26-MCP-Server (127.0.0.1)
     mcp_servers:
@@ -110,6 +111,12 @@ let
         connect_timeout: 5
       fuchs-darktable:
         url: "http://192.168.1.40:9011/mcp"
+        connect_timeout: 5
+      # Shell-Zugriff auf Nexus, läuft dort als unprivilegierter User 'sojus'.
+      # Tier-Klassifizierung + Bestätigungspflicht für Tier-3 sitzt im Server
+      # selbst (scripts/nexus/fuchs-shell-server.py), nicht mehr in core.py.
+      fuchs-shell:
+        url: "http://192.168.1.40:8012/mcp"
         connect_timeout: 5
 
     platforms:

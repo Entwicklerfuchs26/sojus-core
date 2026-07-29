@@ -15,13 +15,16 @@
     ./fuchs-mcp-handbrake.nix    # Port 9009 – HandBrake Video-Encode
     ./fuchs-mcp-lightburn.nix    # Port 9010 – LightBurn Laser-CAD
     ./fuchs-mcp-darktable.nix    # Port 9011 – Darktable Fotografie
+    ./fuchs-shell.nix            # Port 8012 – Shell-Zugriff (User sojus, nicht fuchs!)
   ];
 
-  # ── Firewall: Ports 9000-9011 nur für darwin26 + nexus selbst ───────────────
+  # ── Firewall: MCP-Ports nur für darwin26 + nexus selbst ─────────────────────
   # Services binden auf 192.168.1.40. Erlaubt sind ausschließlich:
   #   192.168.1.26  – darwin26 / Sojus Core
   #   192.168.1.40  – nexus selbst (Claude Code lokal)
   # Alle anderen IPs im LAN werden abgewiesen (TCP RST + Log).
+  # 8012 (fuchs-shell) läuft über dieselbe Chain wie 9000-9011 — gerade bei
+  # Shell-Zugriff darf das nicht übers allgemeine allowedTCPPorts pauschal offen sein.
   networking.firewall.extraCommands = ''
     # Dedizierte Chain anlegen (oder leeren wenn Neustart)
     iptables -N mcp-sojus-filter 2>/dev/null || iptables -F mcp-sojus-filter
@@ -32,10 +35,12 @@
 
     # In nixos-fw einhängen (vor dem Default-Drop, da extraCommands vor finalem Reject läuft)
     iptables -A nixos-fw -p tcp --dport 9000:9011 -j mcp-sojus-filter
+    iptables -A nixos-fw -p tcp --dport 8012      -j mcp-sojus-filter
   '';
 
   networking.firewall.extraStopCommands = ''
     iptables -D nixos-fw -p tcp --dport 9000:9011 -j mcp-sojus-filter 2>/dev/null || true
+    iptables -D nixos-fw -p tcp --dport 8012      -j mcp-sojus-filter 2>/dev/null || true
     iptables -F mcp-sojus-filter 2>/dev/null || true
     iptables -X mcp-sojus-filter 2>/dev/null || true
   '';

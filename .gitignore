@@ -2,6 +2,8 @@ result
 result-*
 *.tmp
 *.bak
+__pycache__/
+*.pyc
 # Klartext-Secrets — niemals committen
 *.env
 *.key
