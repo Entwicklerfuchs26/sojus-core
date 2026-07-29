@@ -27,8 +27,15 @@ in {
     after       = [ "network.target" ];
 
     environment = {
-      HOME             = "/home/sojus";
-      TOOL_TIERS_FILE  = "/etc/sojus/tool_tiers.json";
+      HOME                 = "/home/sojus";
+      UV_CACHE_DIR         = "/home/sojus/.cache/uv";
+      # Zwingt uv auf Nix-Python statt eigenes generisches Python herunterzuladen —
+      # auf darwin26 ohne das ein harter Crash ("stub-ld", siehe mcp-approval-service.nix).
+      # nexus hat nix-ld, wäre also vermutlich glimpflicher ausgegangen, aber
+      # gleiches Muster vorsorglich übernommen statt sich drauf zu verlassen.
+      UV_PYTHON            = "${pkgs.python3}/bin/python3";
+      UV_PYTHON_PREFERENCE = "only-system";
+      TOOL_TIERS_FILE      = "/etc/sojus/tool_tiers.json";
       # mcp-approval-service läuft auf darwin26 (Port siehe dortiges Modul).
       APPROVAL_URL          = "http://192.168.1.26:8014";
       APPROVAL_API_TOKEN    = approvalApiToken;

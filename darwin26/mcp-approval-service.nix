@@ -29,6 +29,11 @@ in {
       # exit code 2 ab ("Failed to initialize cache") — lokal reproduziert.
       HOME         = "/var/lib/mcp-approval";
       UV_CACHE_DIR = "/var/lib/mcp-approval/.cache/uv";
+      # Ohne das versucht uv sein eigenes generisches (dynamisch gelinktes)
+      # Python herunterzuladen — scheitert auf NixOS immer ("stub-ld", kein
+      # Standard-Linker-Pfad). Nix-Python erzwingen, wie in hermes.nix.
+      UV_PYTHON            = "${pkgs.python3}/bin/python3";
+      UV_PYTHON_PREFERENCE = "only-system";
 
       APPROVAL_API_TOKEN   = approvalApiToken;
       APPROVAL_DB_PATH     = "/var/lib/mcp-approval/approvals.db";
