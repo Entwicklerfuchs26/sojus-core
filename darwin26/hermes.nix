@@ -133,9 +133,10 @@ in {
     wants       = [ "network-online.target" ];
     wantedBy    = [ "multi-user.target" ];
 
-    # jq/python3 fehlen im System-Profil (/run/current-system/sw/bin) — Hermes' Terminal-Tool
-    # braucht beide für Shell-Kommandos, die es selbst ausführt.
-    path = [ pkgs.jq pkgs.python3 ];
+    # systemd-Units bekommen NICHT automatisch /run/current-system/sw/bin ins PATH,
+    # nur den NixOS-Systemd-Default (coreutils/findutils/grep/sed/systemd). Hermes'
+    # Terminal-Tool braucht bash/git/curl/jq/python3 für Shell-Kommandos, die es selbst ausführt.
+    path = [ pkgs.bash pkgs.git pkgs.curl pkgs.jq pkgs.python3 ];
 
     environment = {
       HOME                 = "/var/lib/hermes";
