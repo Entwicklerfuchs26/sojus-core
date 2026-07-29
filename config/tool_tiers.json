@@ -1,0 +1,17 @@
+{
+  "_info": "Manuelle Tier-Overrides für mcp_risk_classifier (scripts/shared/mcp_risk_classifier.py). Die generische Auto-Engine klassifiziert Tools nach Verb-Token im Tool-Namen. Hier nur Ausnahmen die nicht ins Muster passen.",
+  "_auto_engine": "Tier 3: {delete,remove,purge,destroy,trash,wipe,erase,drop} | Tier 2: {create,update,write,send,post,set,add,...} | Tier 1: alles andere (get,list,search,find,read,...)",
+
+  "overrides": {
+    "execute_command":                    "content_based",
+    "ha_restart":                         3,
+    "ha_call_service":                    2,
+    "ha_dismiss_persistent_notification": 2,
+    "darktable_export_status":            1,
+    "hypr_batch":                         2,
+    "stellarium_action":                  2,
+    "cursor":                             2,
+    "selection":                          2,
+    "text":                               2
+  }
+}

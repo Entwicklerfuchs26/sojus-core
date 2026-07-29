@@ -1,9 +1,20 @@
 { config, pkgs, lib, ... }:
 
 let
-  script = pkgs.writeText "fuchs-shell-server.py"
-    (builtins.readFile ../scripts/nexus/fuchs-shell-server.py);
+  # fuchs-shell-server.py importiert mcp_risk_classifier als Sibling-Modul —
+  # beide müssen im selben Verzeichnis landen, deshalb runCommand statt
+  # writeText (das nur eine einzelne Datei erzeugt).
+  srcDir = pkgs.runCommand "fuchs-shell-src" {} ''
+    mkdir -p $out
+    cp ${pkgs.writeText "fuchs-shell-server.py" (builtins.readFile ../scripts/nexus/fuchs-shell-server.py)} $out/fuchs-shell-server.py
+    cp ${pkgs.writeText "mcp_risk_classifier.py" (builtins.readFile ../scripts/shared/mcp_risk_classifier.py)} $out/mcp_risk_classifier.py
+  '';
+  toolTiers = pkgs.writeText "tool_tiers.json" (builtins.readFile ../config/tool_tiers.json);
+
   port = 8012;
+
+  # Muss mit approvalApiToken in darwin26/mcp-approval-service.nix identisch sein.
+  approvalApiToken = "mcp-approval-internal-token-change-in-prod";
 in {
   # Läuft als 'sojus' (definiert in modules/ai/sojus.nix), NICHT als 'fuchs' —
   # eigenes, unprivilegiertes Home statt Zugriff auf Jonas' echtes Home
@@ -16,16 +27,33 @@ in {
     after       = [ "network.target" ];
 
     environment = {
-      HOME = "/home/sojus";
+      HOME             = "/home/sojus";
+      TOOL_TIERS_FILE  = "/etc/sojus/tool_tiers.json";
+      # mcp-approval-service läuft auf darwin26 (Port siehe dortiges Modul).
+      APPROVAL_URL          = "http://192.168.1.26:8014";
+      APPROVAL_API_TOKEN    = approvalApiToken;
+      APPROVAL_WAIT_TIMEOUT = "90";
     };
 
     serviceConfig = {
       Type       = "simple";
       User       = "sojus";
       Group      = "sojus";
-      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 192.168.1.40 --port ${toString port}";
+      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${srcDir}/fuchs-shell-server.py --transport streamable-http --host 192.168.1.40 --port ${toString port}";
       Restart    = "on-failure";
       RestartSec = "10s";
     };
+  };
+
+  # tool_tiers.json aus dem Nix-Store nach /etc/sojus/ synchronisieren, wie
+  # vormals sojus-tool-groups in archive/sojus-core-legacy/sojus-core.nix.
+  # Wird bei jedem nixos-rebuild switch aktualisiert. Weltlesbar (0644) reicht,
+  # der Service läuft ohnehin unprivilegiert als sojus.
+  system.activationScripts.fuchs-shell-tool-tiers = {
+    deps = [ "users" ];
+    text = ''
+      mkdir -p /etc/sojus
+      install -m 0644 ${toolTiers} /etc/sojus/tool_tiers.json
+    '';
   };
 }

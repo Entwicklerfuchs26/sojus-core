@@ -1,43 +1,38 @@
 #!/usr/bin/env python3
 """fuchs-shell — Shell-MCP-Server auf Nexus (Port 8012), läuft als User 'sojus'.
 
-Vorher lag die Tier-Klassifizierung + Bestätigungspflicht für gefährliche Befehle
-in sojus-core/core.py (chat-basiertes "ja"/Zufallscode-System). core.py wurde mit
-der Hermes-Migration archiviert (archive/sojus-core-legacy/) — die Absicherung
-ist deshalb hier selbst eingebaut, damit Hermes nicht ungeschützt auf Nexus shellen
-kann.
+Phase 1 von docs/mcp-approval-architecture.md: Tier-Klassifizierung kommt jetzt
+aus der geteilten mcp_risk_classifier-Bibliothek, und Tier-3-Befehle brauchen
+eine echte Freigabe über mcp-approval-service (darwin26) statt eines
+selbst-ausgestellten Bestätigungs-Tokens.
 
-Wichtig — Hermes hat ein eigenes, ausgereifteres Approval-System (approvals.mode:
-smart/manual/off, LLM-Risikoeinschätzung, siehe hermes-agent.nousresearch.com/docs/
-user-guide/security), aber laut Doku greift das NUR für Hermes' eigenes natives
-terminal-Tool, explizit NICHT für MCP-Server ("MCP tools themselves do not pass
-through the dangerous-command approval gate"). Und selbst fürs native Tool braucht
-es einen interaktiven Kanal (CLI/Messaging-Platform) — auf der api_server-Plattform
-(unser Setup, Open WebUI) gibt es den nicht. Deshalb: eigene Absicherung hier, mit
-Mustern aus Hermes' dokumentierter Blockliste übernommen wo sinnvoll (Recherche
-2026-07-29).
+Vorher lag die Absicherung in sojus-core/core.py (chat-basiertes "ja"/
+Zufallscode-System, archiviert in archive/sojus-core-legacy/), danach kurz in
+einem lokalen Zwei-Schritt-Token direkt in diesem Skript. Beides hatte dieselbe
+Schwäche: das aufrufende Modell konnte die Bestätigung selbst zurückspielen.
+mcp-approval-service behebt das — die Freigabe passiert komplett außerhalb der
+Reichweite des Modells, execute_command wartet einfach synchron auf eine
+Entscheidung.
+
+Hermes hat zwar ein eigenes, ausgereifteres Approval-System (approvals.mode:
+smart/manual/off), das greift aber laut Doku NUR für Hermes' natives
+terminal-Tool, nicht für MCP-Server, und selbst dafür bräuchte es einen
+interaktiven Kanal, den die api_server-Plattform (unser Setup) nicht hat.
+Deshalb die eigene Absicherung hier (Recherche 2026-07-29).
 
 Tier 1 (lesend)      → läuft sofort.
 Tier 2 (schreibend)  → läuft sofort, wird aber laut (WARNING) geloggt.
-Tier 3 (destruktiv/systemkritisch: rm -rf, systemctl stop/restart/disable/mask,
-        nixos-rebuild, reboot/poweroff/shutdown, Befehlsverkettung &&/||/;)
-                     → erster Aufruf ohne confirm_token wird abgelehnt und liefert
-                       einen einmaligen Token zurück (2 Min gültig, nur für exakt
-                       diesen Befehl). Zweiter Aufruf MIT confirm_token führt aus.
-                       Optional: Push über Home Assistant, falls HA_URL/HA_TOKEN
-                       gesetzt sind (sonst nur Log — siehe README-Hinweis unten).
-
-Das ist kein hartes Human-in-the-loop-Gate (ein Modell könnte den Token im
-selben Turn zurückspielen) — aber Friktion + Audit-Log + optionaler Push sind
-strikt mehr als vorher (nur 4 Hard-Blacklist-Regexe, kein Tier-Konzept mehr).
+Tier 3 (destruktiv/systemkritisch) → execute_command hält den Aufruf an und
+                       wartet bis zu APPROVAL_WAIT_TIMEOUT Sekunden auf eine
+                       Freigabe über mcp-approval-service (Push an Jonas via
+                       Home Assistant, sofern dort konfiguriert). Ist der
+                       Service nicht erreichbar oder nicht konfiguriert, wird
+                       sicherheitshalber abgelehnt (fail closed).
 """
 
-import hashlib
 import json
 import logging
 import os
-import re
-import secrets as secrets_mod
 import subprocess
 import time
 import urllib.error
@@ -46,21 +41,23 @@ from pathlib import Path
 
 from fastmcp import FastMCP
 
+import mcp_risk_classifier as risk
+
 log = logging.getLogger("fuchs-shell")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 PORT     = int(os.environ.get("SHELL_MCP_PORT", "8012"))
 HOME_DIR = os.environ.get("HOME", "/home/sojus")
 
-# Kein eigener API-Key-Check: wie alle anderen nexus/darwin26 MCP-Server verlässt
-# sich fuchs-shell auf Netzwerk-Isolation (Firewall-Chain mcp-sojus-filter, nur
-# darwin26+nexus) statt auf Transport-Auth — fastmcps streamable-http nimmt hier
-# keinen einfachen Bearer-Token entgegen. Systemweite Auth wäre ein separates Thema.
+# mcp-approval-service (darwin26) — Freigabe-Warteschlange für Tier-3.
+APPROVAL_URL           = os.environ.get("APPROVAL_URL", "")
+APPROVAL_API_TOKEN     = os.environ.get("APPROVAL_API_TOKEN", "")
+APPROVAL_WAIT_TIMEOUT  = int(os.environ.get("APPROVAL_WAIT_TIMEOUT", "90"))
+APPROVAL_POLL_INTERVAL = 3
 
-# Optional — Push-Benachrichtigung bei Tier-3-Anfragen. Leer = nur Log.
-HA_URL            = os.environ.get("HA_URL", "")
-HA_TOKEN          = os.environ.get("HA_TOKEN", "")
-HA_NOTIFY_SERVICE = os.environ.get("HA_NOTIFY_SERVICE", "notify/mobile_app_iphone")
+# Kein eigener API-Key-Check für diesen Server selbst: wie alle anderen nexus/
+# darwin26 MCP-Server verlässt sich fuchs-shell auf Netzwerk-Isolation
+# (Firewall-Chain mcp-sojus-filter, nur darwin26+nexus).
 
 mcp = FastMCP(
     "fuchs-shell",
@@ -68,144 +65,95 @@ mcp = FastMCP(
         "Shell-Zugriff auf Nexus (Gaming-PC, NixOS + Hyprland). "
         f"Läuft als unprivilegierter User 'sojus' (Home: {HOME_DIR}), NICHT als fuchs. "
         "Tier-3-Befehle (rm -rf, systemctl stop/restart, nixos-rebuild, reboot/poweroff, "
-        "Befehlsverkettung) brauchen zwei execute_command-Aufrufe: erst ohne confirm_token "
-        "(liefert Token zurück), dann mit confirm_token exakt aus Antwort 1."
+        "Befehlsverkettung) brauchen eine Freigabe durch Jonas — der Aufruf wartet "
+        f"automatisch bis zu {APPROVAL_WAIT_TIMEOUT}s. Kommt keine Freigabe, einfach "
+        "später erneut aufrufen."
     ),
 )
 
-# ── Hard-Blacklist — greift immer, unabhängig von Tier/Token ─────────────────
-# Basis aus archive/sojus-core-legacy/core.py, erweitert um Muster aus Hermes'
-# eigener (dokumentierter) Approval-Blockliste — die gilt aber nur für Hermes'
-# natives terminal-Tool, NICHT für MCP-Server wie diesen hier, siehe README-
-# Hinweis unten. Deshalb hier übernommen statt sich drauf zu verlassen.
-_HARD_BLOCK_RE = re.compile(
-    r"rm\s+-[rRfF]*f\s+/"
-    r"|dd\s+if=/dev/(zero|random).*of=/dev/"
-    r"|mkfs\."
-    r"|:\(\)\{.*:\|:"
-    r"|kill\s+-9\s+-1\b"                      # alle Prozesse killen
-    r"|\|\s*(sh|bash|zsh)\b"                  # curl ... | sh
-    r"|bash\s*<\(\s*curl"                     # bash <(curl ...)
-    r"|wget\s+-O-.*\|\s*(sh|bash)",           # wget -O- | sh
-    re.IGNORECASE | re.DOTALL,
-)
+
+def _approval_request(method: str, path: str, body: dict | None = None) -> dict:
+    url = f"{APPROVAL_URL.rstrip('/')}{path}"
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        url,
+        data=data,
+        method=method,
+        headers={
+            "Authorization": f"Bearer {APPROVAL_API_TOKEN}",
+            "Content-Type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read())
 
 
-def _hard_blocked(cmd: str) -> bool:
-    return bool(_HARD_BLOCK_RE.search(cmd))
+def _await_approval(command: str) -> tuple[bool, str]:
+    """Fragt mcp-approval-service um Freigabe und wartet synchron auf eine Entscheidung.
 
-
-# ── Tier-Klassifizierung — Basis aus core.py, plus Muster aus Hermes' Blockliste ─
-_TIER3_CMD_RE = re.compile(
-    r"\bpoweroff\b|\bshutdown\b|\breboot\b"
-    r"|\bnixos-rebuild\b"
-    r"|\bsystemctl\s+(stop|restart|disable|mask)\b"
-    r"|\brm\s+-[rRfF]*[fF]\b"
-    r"|\bmkfs\b|\bdd\s+if="
-    r"|\bDROP\s+TABLE\b|\bTRUNCATE\s+TABLE\b|\bDELETE\s+FROM\b"
-    r"|\bchmod\s+-R\s+(000|777)\b|\bchown\s+-R\s+root\b"
-    r"|>\s*/etc/\S"
-    r"|\bpkill\s+-9\b|\bkill\s+-9\b"
-    r"|\bdocker\s+(stop|kill|restart)\b"
-    r"|>\s*/dev/sd",
-    re.IGNORECASE,
-)
-_CHAIN_RE = re.compile(r"&&|\|\||;")
-_READONLY_CMDS = frozenset({
-    "ls", "ll", "la", "cat", "head", "tail", "grep", "find", "locate",
-    "df", "du", "free", "ps", "uptime", "who", "whoami", "pwd", "echo",
-    "env", "printenv", "date", "cal", "id", "groups", "uname", "hostname",
-    "journalctl", "dmesg", "lsblk", "lsusb", "lspci", "lscpu",
-    "ip", "nmcli", "netstat", "ss", "systemctl",
-})
-
-
-def _classify_tier(cmd: str) -> int:
-    cmd = cmd.strip()
-    if not cmd:
-        return 2
-    if _TIER3_CMD_RE.search(cmd) or _CHAIN_RE.search(cmd):
-        return 3
-    first = cmd.split()[0] if cmd.split() else ""
-    if first in _READONLY_CMDS:
-        return 1
-    return 2
-
-
-# ── Tier-3 Bestätigungs-Tokens (in-memory, pro Prozess) ──────────────────────
-_TOKEN_TTL = 120  # Sekunden
-_pending_tier3: dict[str, tuple[str, float]] = {}
-
-
-def _cmd_hash(cmd: str) -> str:
-    return hashlib.sha256(cmd.encode()).hexdigest()[:16]
-
-
-def _notify_tier3_pending(cmd: str, token: str) -> None:
-    log.warning("TIER-3 ANGEFRAGT (wartet auf Bestätigung): %s | Token: %s", cmd, token)
-    if not (HA_URL and HA_TOKEN):
-        return
-    try:
-        req = urllib.request.Request(
-            f"{HA_URL.rstrip('/')}/api/services/{HA_NOTIFY_SERVICE}",
-            data=json.dumps({
-                "title": "⚠️ Sojus: Tier-3 Shell-Befehl angefragt (Nexus)",
-                "message": f"{cmd}\nToken: {token} (2 Min gültig)",
-            }).encode(),
-            headers={"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"},
-            method="POST",
+    Fail closed: ist der Service nicht konfiguriert oder nicht erreichbar,
+    wird der Befehl NICHT ausgeführt.
+    """
+    if not (APPROVAL_URL and APPROVAL_API_TOKEN):
+        return False, (
+            "⛔ mcp-approval-service nicht konfiguriert (APPROVAL_URL/APPROVAL_API_TOKEN) "
+            "— Tier-3 wird sicherheitshalber verweigert."
         )
-        urllib.request.urlopen(req, timeout=5)
-    except (urllib.error.URLError, OSError) as e:
-        log.error("HA-Notify fehlgeschlagen: %s", e)
+    try:
+        created = _approval_request("POST", "/approvals", {
+            "host": "nexus",
+            "server": "fuchs-shell",
+            "tool": "execute_command",
+            "arguments": {"command": command},
+            "tier": 3,
+            "reason": "Tier-3 Shell-Befehl",
+        })
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        log.error("approval-service nicht erreichbar: %s", e)
+        return False, f"⛔ mcp-approval-service nicht erreichbar — Tier-3 wird sicherheitshalber verweigert ({e})."
 
+    approval_id = created["id"]
+    log.warning("TIER-3 ANGEFRAGT, wartet auf Freigabe: %s | approval_id=%s", command, approval_id)
 
-def _check_or_issue_token(cmd: str, provided: str) -> tuple[bool, str]:
-    h = _cmd_hash(cmd)
-    now = time.time()
-    for k in [k for k, (_, exp) in _pending_tier3.items() if exp < now]:
-        del _pending_tier3[k]
+    deadline = time.time() + APPROVAL_WAIT_TIMEOUT
+    while time.time() < deadline:
+        time.sleep(APPROVAL_POLL_INTERVAL)
+        try:
+            status = _approval_request("GET", f"/approvals/{approval_id}")
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            log.error("approval-service Poll fehlgeschlagen: %s", e)
+            continue
 
-    if provided:
-        entry = _pending_tier3.get(h)
-        if entry and entry[0] == provided:
-            del _pending_tier3[h]
+        if status["status"] == "approved":
             return True, ""
-        return False, "❌ Ungültiger oder abgelaufener Bestätigungs-Token für genau diesen Befehl."
+        if status["status"] == "rejected":
+            return False, f"❌ Abgelehnt: {status.get('decision_note') or 'kein Grund angegeben'}"
+        if status["status"] == "expired":
+            return False, "⏱️ Freigabe-Zeitfenster abgelaufen, ohne Entscheidung."
 
-    token = secrets_mod.token_hex(4)
-    _pending_tier3[h] = (token, now + _TOKEN_TTL)
-    _notify_tier3_pending(cmd, token)
     return False, (
-        f"🔴 Tier-3 (destruktiv/systemkritisch): `{cmd}`\n"
-        f"Erneut aufrufen mit confirm_token=\"{token}\" um auszuführen (2 Minuten gültig, "
-        "nur für exakt diesen Befehl)."
+        f"⏳ Noch keine Entscheidung (approval_id={approval_id}). "
+        "Freigabe steht noch aus — später erneut versuchen."
     )
 
 
 @mcp.tool()
-def execute_command(
-    command: str,
-    working_dir: str = HOME_DIR,
-    timeout: int = 30,
-    confirm_token: str = "",
-) -> dict:
+def execute_command(command: str, working_dir: str = HOME_DIR, timeout: int = 30) -> dict:
     """Shell-Befehl auf Nexus als User 'sojus' ausführen.
 
-    Tier 1/2 laufen sofort. Tier 3 (destruktiv/systemkritisch) braucht zwei
-    Aufrufe: ohne confirm_token → Token wird zurückgegeben; mit confirm_token
-    aus der ersten Antwort → wird ausgeführt.
+    Tier 1/2 laufen sofort. Tier 3 (destruktiv/systemkritisch) wartet auf eine
+    Freigabe durch Jonas über mcp-approval-service, bevor der Befehl läuft.
     """
-    if _hard_blocked(command):
+    if risk.is_hard_blocked(command):
         return {"error": "⛔ Befehl durch Hard-Blacklist blockiert.", "stdout": "", "stderr": "", "returncode": -1}
 
-    tier = _classify_tier(command)
+    tier = risk.classify_shell_command(command)
 
     if tier >= 3:
-        ok, msg = _check_or_issue_token(command, confirm_token)
+        ok, msg = _await_approval(command)
         if not ok:
             return {"error": msg, "tier": tier, "stdout": "", "stderr": "", "returncode": -1}
-        log.warning("TIER-3 bestätigt, wird ausgeführt: %s", command)
+        log.warning("TIER-3 freigegeben, wird ausgeführt: %s", command)
     elif tier == 2:
         log.warning("TIER-2 Befehl: %s", command)
 
