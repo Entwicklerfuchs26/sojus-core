@@ -5,6 +5,7 @@
     ./tools.nix
     ./hermes.nix
     ./mcp-approval-service.nix
+    ./mcp-approval-proxy.nix
     ./open-webui.nix
     ./fuchs-discord.nix
     ./fuchs-email.nix

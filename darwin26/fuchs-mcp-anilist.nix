@@ -16,7 +16,10 @@
     environment = {
       HOME      = "/var/lib/fuchs-mcp-anilist";
       TRANSPORT = "http";
-      PORT      = "8008";
+      # Phase 2: interner Port, mcp-approval-proxy uebernimmt den bisherigen
+      # externen Port 8008 (siehe mcp-approval-proxy.nix). Kein eigenes
+      # Firewall-Opening mehr noetig.
+      PORT      = "18008";
     };
 
     serviceConfig = {
@@ -34,6 +37,4 @@
       PrivateTmp      = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 8008 ];
 }
