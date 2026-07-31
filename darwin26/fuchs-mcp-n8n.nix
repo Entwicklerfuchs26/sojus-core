@@ -31,13 +31,12 @@ in {
       User            = "fuchs-mcp-n8n";
       Group           = "fuchs-mcp-n8n";
       EnvironmentFile = "/etc/sojus/fuchs-mcp-n8n.env";
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 8005";
+      # Phase 2: interner Port 18005, mcp-approval-proxy uebernimmt extern 8005.
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 18005";
       Restart         = "on-failure";
       RestartSec      = "30s";
       NoNewPrivileges = true;
       PrivateTmp      = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 8005 ];
 }

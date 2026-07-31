@@ -22,13 +22,12 @@
       User            = "sojus-mcp";
       Group           = "sojus-mcp";
       EnvironmentFile = "/etc/sojus/fuchs-mcp-nextcloud-private.env";
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 nextcloud-mcp-server run --host 0.0.0.0 --port 8009 --transport streamable-http";
+      # Phase 2: interner Port 18009, mcp-approval-proxy uebernimmt extern 8009.
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 nextcloud-mcp-server run --host 0.0.0.0 --port 18009 --transport streamable-http";
       Restart         = "on-failure";
       RestartSec      = "30s";
       NoNewPrivileges = true;
       PrivateTmp      = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 8009 ];
 }

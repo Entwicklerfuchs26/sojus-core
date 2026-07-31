@@ -31,13 +31,12 @@ in {
       User            = "fuchs-mcp-jellyfin";
       Group           = "fuchs-mcp-jellyfin";
       EnvironmentFile = "/etc/sojus/fuchs-mcp-jellyfin.env";
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 8006";
+      # Phase 2: interner Port 18006, mcp-approval-proxy uebernimmt extern 8006.
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 18006";
       Restart         = "on-failure";
       RestartSec      = "30s";
       NoNewPrivileges = true;
       PrivateTmp      = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 8006 ];
 }

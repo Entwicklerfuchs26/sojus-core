@@ -31,13 +31,12 @@ in {
       User            = "fuchs-mcp-homeassistant";
       Group           = "fuchs-mcp-homeassistant";
       EnvironmentFile = "/etc/sojus/fuchs-mcp-homeassistant.env";
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 8004";
+      # Phase 2: interner Port 18004, mcp-approval-proxy uebernimmt extern 8004.
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 18004";
       Restart         = "on-failure";
       RestartSec      = "30s";
       NoNewPrivileges = true;
       PrivateTmp      = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 8004 ];
 }

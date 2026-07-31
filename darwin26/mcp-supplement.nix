@@ -33,13 +33,12 @@ in {
       User            = "sojus-mcp-supplement";
       Group           = "sojus-mcp-supplement";
       EnvironmentFile = "/etc/sojus/mcp-nextcloud.env";
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 8001";
+      # Phase 2: interner Port 18001, mcp-approval-proxy uebernimmt extern 8001.
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 18001";
       Restart         = "on-failure";
       RestartSec      = "30s";
       NoNewPrivileges = true;
       PrivateTmp      = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 8001 ];
 }

@@ -31,13 +31,12 @@ in {
       User            = "fuchs-mcp-vikunja";
       Group           = "fuchs-mcp-vikunja";
       EnvironmentFile = "/etc/sojus/fuchs-mcp-vikunja.env";
-      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 8003";
+      # Phase 2: interner Port 18003, mcp-approval-proxy uebernimmt extern 8003.
+      ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 --with httpx fastmcp run ${script} --transport streamable-http --host 0.0.0.0 --port 18003";
       Restart         = "on-failure";
       RestartSec      = "30s";
       NoNewPrivileges = true;
       PrivateTmp      = true;
     };
   };
-
-  networking.firewall.allowedTCPPorts = [ 8003 ];
 }

@@ -12,10 +12,20 @@ let
   toolTiers = pkgs.writeText "tool_tiers.json" (builtins.readFile ../config/tool_tiers.json);
 
   # Phase 2 (docs/mcp-approval-architecture.md): Server für Server migriert,
-  # nicht alles auf einmal. Pilot: fuchs-anilist (niedrigster Blast-Radius).
+  # nicht alles auf einmal. Pilot (fuchs-anilist) zuerst einzeln deployt und
+  # verifiziert, jetzt Rest der darwin26-Flotte im zweiten Batch.
   # Interner Port = externer Port + 10000, feste Konvention für den ganzen Umbau.
   servers = [
-    { name = "fuchs-anilist"; external_port = 8008; internal_port = 18008; }
+    { name = "nc-weites-feld";       external_port = 8000; internal_port = 18000; }
+    { name = "nc-weites-feld-extra"; external_port = 8001; internal_port = 18001; }
+    { name = "fuchs-openproject";    external_port = 8002; internal_port = 18002; }
+    { name = "fuchs-vikunja";        external_port = 8003; internal_port = 18003; }
+    { name = "fuchs-homeassistant";  external_port = 8004; internal_port = 18004; }
+    { name = "fuchs-n8n";            external_port = 8005; internal_port = 18005; }
+    { name = "fuchs-jellyfin";       external_port = 8006; internal_port = 18006; }
+    { name = "fuchs-immich";         external_port = 8007; internal_port = 18007; }
+    { name = "fuchs-anilist";        external_port = 8008; internal_port = 18008; }
+    { name = "nc-sternenhof";        external_port = 8009; internal_port = 18009; }
   ];
 
   proxyConfig = pkgs.writeText "mcp-approval-proxy.json" (builtins.toJSON { inherit servers; });
