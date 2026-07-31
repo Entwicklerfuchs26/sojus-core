@@ -29,7 +29,10 @@ let
     export PYTHONPATH="$RESOLVE/Developer/Scripting/Modules''${PYTHONPATH:+:$PYTHONPATH}"
     export RESOLVE_SCRIPT_LIB="$RESOLVE/libs/Fusion/fusionscript.so"
 
-    exec ${pkgs.uv}/bin/uvx mcp-proxy \
+    # Versionspin: mcp-proxy 0.12.0 + mcp>=2.0.0 bricht mit
+    # "ImportError: cannot import name 'request_ctx' from mcp.server.lowlevel.server"
+    # (PyPI-Versionsdrift, ohne Pin holt uvx sonst das neueste mcp).
+    exec ${pkgs.uv}/bin/uvx --with "mcp<2.0.0" mcp-proxy==0.12.0 \
       --port ${toString port} --host 127.0.0.1 \
       --transport streamablehttp \
       --pass-environment \
