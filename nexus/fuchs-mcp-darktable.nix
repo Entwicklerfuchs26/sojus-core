@@ -2,7 +2,8 @@
 
 let
   script = pkgs.writeText "mcp-darktable.py" (builtins.readFile ../scripts/nexus/mcp-darktable.py);
-  port   = 9011;
+  # Phase 2: interner Port 19011, mcp-approval-proxy uebernimmt extern 9011.
+  port   = 19011;
 in {
   systemd.services.fuchs-mcp-darktable = {
     description = "Fuchs – Darktable Foto-Workflow MCP (HTTP, Port ${toString port})";
@@ -19,7 +20,7 @@ in {
     serviceConfig = {
       Type       = "simple";
       User       = "fuchs";
-      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 192.168.1.40 --port ${toString port}";
+      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 127.0.0.1 --port ${toString port}";
       Restart    = "on-failure";
       RestartSec = "5s";
     };

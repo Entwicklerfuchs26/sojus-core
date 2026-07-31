@@ -2,7 +2,8 @@
 
 let
   script = pkgs.writeText "mcp-handbrake.py" (builtins.readFile ../scripts/nexus/mcp-handbrake.py);
-  port   = 9009;
+  # Phase 2: interner Port 19009, mcp-approval-proxy uebernimmt extern 9009.
+  port   = 19009;
 in {
   systemd.services.fuchs-mcp-handbrake = {
     description = "Fuchs – HandBrake Video-Encode MCP (HTTP, Port ${toString port})";
@@ -19,7 +20,7 @@ in {
     serviceConfig = {
       Type       = "simple";
       User       = "fuchs";
-      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 192.168.1.40 --port ${toString port}";
+      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 127.0.0.1 --port ${toString port}";
       Restart    = "on-failure";
       RestartSec = "5s";
     };

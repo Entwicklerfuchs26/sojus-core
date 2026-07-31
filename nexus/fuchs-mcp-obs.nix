@@ -1,7 +1,8 @@
 { config, pkgs, lib, ... }:
 
 let
-  port = 9003;
+  # Phase 2: interner Port 19003, mcp-approval-proxy uebernimmt extern 9003.
+  port = 19003;
 in {
   # agenix Secret: OBS WebSocket Passwort
   age.secrets.fuchs-mcp-obs-env = {
@@ -30,7 +31,7 @@ in {
       User            = "fuchs";
       EnvironmentFile = config.age.secrets.fuchs-mcp-obs-env.path;
       ExecStart       = ''${pkgs.uv}/bin/uvx mcp-proxy \
-        --port ${toString port} --host 192.168.1.40 \
+        --port ${toString port} --host 127.0.0.1 \
         --transport streamablehttp \
         --pass-environment \
         --named-server obs "${pkgs.nodejs}/bin/npx -y obs-mcp@latest"'';

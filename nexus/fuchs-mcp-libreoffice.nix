@@ -2,7 +2,8 @@
 
 let
   script = pkgs.writeText "mcp-libreoffice.py" (builtins.readFile ../scripts/nexus/mcp-libreoffice.py);
-  port   = 9004;
+  # Phase 2: interner Port 19004, mcp-approval-proxy uebernimmt extern 9004.
+  port   = 19004;
 in {
   systemd.services.fuchs-mcp-libreoffice = {
     description = "Fuchs – LibreOffice MCP (HTTP, Port ${toString port})";
@@ -16,7 +17,7 @@ in {
     serviceConfig = {
       Type       = "simple";
       User       = "fuchs";
-      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 192.168.1.40 --port ${toString port}";
+      ExecStart  = "${pkgs.uv}/bin/uvx fastmcp run ${script} --transport streamable-http --host 127.0.0.1 --port ${toString port}";
       Restart    = "on-failure";
       RestartSec = "10s";
     };

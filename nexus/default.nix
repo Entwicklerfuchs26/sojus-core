@@ -16,6 +16,7 @@
     ./fuchs-mcp-lightburn.nix    # Port 9010 – LightBurn Laser-CAD
     ./fuchs-mcp-darktable.nix    # Port 9011 – Darktable Fotografie
     ./fuchs-shell.nix            # Port 8012 – Shell-Zugriff (User sojus, nicht fuchs!)
+    ./mcp-approval-proxy.nix     # Phase 2 Tier-Gate vor 9000-9011 (fuchs-shell hat eigenes aus Phase 1)
   ];
 
   # ── Firewall: MCP-Ports nur für darwin26 + nexus selbst ─────────────────────

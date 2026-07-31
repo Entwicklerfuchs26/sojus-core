@@ -1,7 +1,8 @@
 { config, pkgs, lib, ... }:
 
 let
-  port = 9005;
+  # Phase 2: interner Port 19005, mcp-approval-proxy uebernimmt extern 9005.
+  port = 19005;
 in {
   systemd.services.fuchs-mcp-freecad = {
     description = "Fuchs – FreeCAD MCP via mcp-proxy (HTTP, Port ${toString port})";
@@ -16,7 +17,7 @@ in {
       Type       = "simple";
       User       = "fuchs";
       ExecStart  = ''${pkgs.uv}/bin/uvx mcp-proxy \
-        --port ${toString port} --host 192.168.1.40 \
+        --port ${toString port} --host 127.0.0.1 \
         --transport streamablehttp \
         --named-server freecad "${pkgs.uv}/bin/uvx freecad-mcp"'';
       Restart    = "on-failure";

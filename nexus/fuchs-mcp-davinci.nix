@@ -1,7 +1,8 @@
 { config, pkgs, lib, ... }:
 
 let
-  port = 9006;
+  # Phase 2: interner Port 19006, mcp-approval-proxy uebernimmt extern 9006.
+  port = 19006;
 
   # DaVinci Resolve Scripting-Pfad wird dynamisch zur Laufzeit per find ermittelt,
   # da der Nix-Store-Hash sich bei Updates ändert. Store enthaelt pro Version
@@ -29,7 +30,7 @@ let
     export RESOLVE_SCRIPT_LIB="$RESOLVE/libs/Fusion/fusionscript.so"
 
     exec ${pkgs.uv}/bin/uvx mcp-proxy \
-      --port ${toString port} --host 192.168.1.40 \
+      --port ${toString port} --host 127.0.0.1 \
       --transport streamablehttp \
       --pass-environment \
       --named-server davinci "${pkgs.uv}/bin/uvx resolve-mcp"

@@ -1,7 +1,10 @@
 { config, pkgs, lib, ... }:
 
 let
-  port = 9000;
+  # Phase 2: interner Port 19000, mcp-approval-proxy uebernimmt extern 9000.
+  # 127.0.0.1 statt 192.168.1.40 — Backend nur noch lokal erreichbar, kein
+  # Umweg ueber die Firewall-INPUT-Chain fuer die eigene LAN-IP noetig.
+  port = 19000;
   # SICHERHEIT: Ausschließlich /home/fuchs — kein /etc/nixos, kein /
   allowedDir = "/home/fuchs";
 
@@ -29,7 +32,7 @@ in {
       User       = "sojus";
       # URL-Pfad: /servers/filesystem/mcp (nicht /mcp — mcp-proxy 0.12.0 named-server routing)
       ExecStart  = ''${pkgs.uv}/bin/uvx mcp-proxy \
-        --port ${toString port} --host 192.168.1.40 \
+        --port ${toString port} --host 127.0.0.1 \
         --transport streamablehttp \
         --named-server filesystem ${startScript}'';
       Restart    = "on-failure";
