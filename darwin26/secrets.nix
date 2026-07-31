@@ -108,6 +108,14 @@
       mode  = "0400";
     };
 
+    # mcp-approval-service: HA_TOKEN für Push-Notify bei Tier-3-Freigaben
+    "sojus/mcp-approval" = {
+      path  = "/etc/sojus/mcp-approval.env";
+      owner = "mcp-approval";
+      group = "mcp-approval";
+      mode  = "0400";
+    };
+
     # Open WebUI: WEBUI_SECRET_KEY (and other OpenWebUI env vars)
     # DynamicUser → user doesn't exist at activation time; root owns EnvironmentFile (systemd reads it as root)
     "sojus/open-webui" = {

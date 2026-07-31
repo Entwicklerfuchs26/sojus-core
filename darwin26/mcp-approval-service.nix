@@ -38,16 +38,17 @@ in {
       APPROVAL_API_TOKEN   = approvalApiToken;
       APPROVAL_DB_PATH     = "/var/lib/mcp-approval/approvals.db";
       APPROVAL_TTL_SECONDS = "300";
-      # Home Assistant läuft auf demselben Host — Push ist optional:
-      # HA_TOKEN bewusst leer, ohne echten Long-Lived-Token bleibt es beim Log.
-      HA_URL   = "http://127.0.0.1:8123";
-      HA_TOKEN = "";
+      # Home Assistant läuft auf demselben Host. HA_TOKEN kommt aus
+      # EnvironmentFile (sops-Secret "sojus/mcp-approval") — ohne den Token
+      # bleibt Push aus und es wird nur geloggt.
+      HA_URL = "http://127.0.0.1:8123";
     };
 
     serviceConfig = {
       Type            = "simple";
       User            = "mcp-approval";
       Group           = "mcp-approval";
+      EnvironmentFile = "/etc/sojus/mcp-approval.env";
       ExecStart       = "${pkgs.uv}/bin/uvx --with fastapi --with 'uvicorn[standard]' uvicorn approval_service:app --app-dir ${scriptDir} --host 0.0.0.0 --port ${toString port}";
       Restart         = "on-failure";
       RestartSec      = "10s";
