@@ -1,0 +1,161 @@
+{
+  "_info": "Tool-Gruppen für Sojus Core Tool-Router. Keywords triggern die passende Server-Gruppe.",
+
+  "kalender": {
+    "keywords": ["kalender", "termin", "event", "veranstaltung", "todo", "erinnerung",
+                 "heute", "morgen", "nächste woche", "wann", "datum", "uhrzeit",
+                 "calendar", "appointment", "meeting", "schedule", "reminder"],
+    "servers": ["nextcloud", "fuchs-nextcloud-private", "fuchs-vikunja"]
+  },
+
+  "aufgaben": {
+    "keywords": ["aufgabe", "task", "projekt", "liste", "to-do", "erledigt", "offen",
+                 "vikunja", "kanban", "backlog", "milestone"],
+    "servers": ["fuchs-vikunja", "fuchs-openproject"]
+  },
+
+  "smarthome": {
+    "keywords": ["licht", "lampe", "heizung", "temperatur", "smart home", "homeassistant",
+                 "home assistant", "schalter", "steckdose", "sensor", "automation",
+                 "szene", "script", "entity", "schalten", "anmachen", "ausmachen",
+                 "helligkeit", "farbe", "bewegung", "türklingel"],
+    "servers": ["fuchs-homeassistant"]
+  },
+
+  "push": {
+    "keywords": ["push", "benachrichtigung", "notification", "schick mir", "sende mir",
+                 "mein handy", "iphone", "ios"],
+    "servers": ["fuchs-homeassistant"]
+  },
+
+  "medien": {
+    "keywords": ["film", "serie", "movie", "video", "jellyfin", "abspielen", "play",
+                 "episode", "staffel", "stream", "mediathek", "watch"],
+    "servers": ["fuchs-jellyfin"]
+  },
+
+  "fotos": {
+    "keywords": ["foto", "bild", "photo", "album", "immich", "galerie", "person",
+                 "gesicht", "erinnerung", "bild suchen"],
+    "servers": ["fuchs-immich"]
+  },
+
+  "anime": {
+    "keywords": ["anime", "manga", "anilist", "episode", "staffel", "serie",
+                 "gucken", "anschauen", "watchlist", "plan to watch", "on hold"],
+    "servers": ["fuchs-anilist"]
+  },
+
+  "dateien": {
+    "keywords": ["datei", "file", "ordner", "folder", "dokument", "upload", "download",
+                 "nextcloud", "cloud", "webdav", "suche datei", "erstelle ordner",
+                 "speicher", "kopier"],
+    "servers": ["nextcloud", "fuchs-nextcloud-private"]
+  },
+
+  "filesystem": {
+    "keywords": ["lies datei", "zeig datei", "öffne datei", "lese file", "dateiinhalt",
+                 "nexus datei", "lokale datei", "home ordner", "verzeichnis nexus",
+                 "read file", "list directory", "suche nexus"],
+    "servers": ["fuchs-mcp-filesystem"]
+  },
+
+  "notizen": {
+    "keywords": ["notiz", "note", "aufschreiben", "merke", "rezept", "kochbuch",
+                 "wiki", "kollektiv", "seite", "artikel"],
+    "servers": ["nextcloud", "fuchs-nextcloud-private"]
+  },
+
+  "nachrichten": {
+    "keywords": ["nachricht", "message", "talk", "chat", "schreib an", "sende an",
+                 "mail", "email", "inbox", "weites feld", "community", "ankündigung"],
+    "servers": ["nextcloud", "fuchs-nextcloud-private", "nextcloud-supplement"]
+  },
+
+  "automation": {
+    "keywords": ["workflow", "n8n", "automation", "cron", "trigger", "webhook",
+                 "ausführen", "automatisch"],
+    "servers": ["fuchs-n8n"]
+  },
+
+  "gedächtnis": {
+    "keywords": ["merk dir", "vergiss", "gedächtnis", "memory", "weißt du noch",
+                 "ich heiße", "ich bin", "ich mag", "ich möchte", "meine präferenz",
+                 "das weiß sojus", "lösch das", "aktualisier"],
+    "servers": ["fuchs-sojus-memory"]
+  },
+
+  "kontakte": {
+    "keywords": ["kontakt", "person", "kontaktbuch", "adressbuch", "telefonnummer",
+                 "email adresse", "contact"],
+    "servers": ["nextcloud", "fuchs-nextcloud-private"]
+  },
+
+  "umfragen": {
+    "keywords": ["umfrage", "poll", "abstimmung", "formulare", "form", "votes"],
+    "servers": ["nextcloud-supplement"]
+  },
+
+  "projekte": {
+    "keywords": ["openproject", "projekt management", "arbeitspaket", "meilenstein",
+                 "zeiterfassung", "time entry", "issue", "bug"],
+    "servers": ["fuchs-openproject"]
+  },
+
+  "browser": {
+    "keywords": ["browser", "tab", "vivaldi", "webseite", "url", "link", "öffne seite",
+                 "screenshot browser", "javascript", "js ausführen", "navigate",
+                 "webseite öffnen", "klick", "webbrowser"],
+    "servers": ["fuchs-mcp-vivaldi"]
+  },
+
+  "fenster": {
+    "keywords": ["fenster", "window", "workspace", "hyprland", "monitor", "bildschirm",
+                 "fokus wechseln", "verschieb fenster", "minimier", "keybinding",
+                 "hyprctl", "dispatch"],
+    "servers": ["fuchs-mcp-hyprland"]
+  },
+
+  "streaming": {
+    "keywords": ["obs", "aufnahme", "recording", "stream starten", "streaming",
+                 "aufnehmen", "stopp aufnahme", "stopp stream"],
+    "servers": ["fuchs-mcp-obs"]
+  },
+
+  "3d": {
+    "keywords": ["blender", "3d", "mesh", "render blender", "szene blender",
+                 "freecad", "cad", "konstruktion", "bauteil", "skizze", "3d modell"],
+    "servers": ["fuchs-mcp-blender", "fuchs-mcp-freecad"]
+  },
+
+  "planetarium": {
+    "keywords": ["stellarium", "sterne", "planet", "himmel", "astronomie", "teleskop",
+                 "konstellation", "mond", "mars", "venus", "jupiter", "saturn",
+                 "sternenhimmel", "deep sky"],
+    "servers": ["fuchs-mcp-stellarium"]
+  },
+
+  "video": {
+    "keywords": ["handbrake", "encode", "transkodier", "konvertier video", "preset",
+                 "h264", "h265", "mkv", "mp4", "komprimier video", "video umwandeln"],
+    "servers": ["fuchs-mcp-handbrake"]
+  },
+
+  "laser": {
+    "keywords": ["lightburn", "laser", "gravur", "schneiden", "lasercutter",
+                 "gravieren", "lasercut", "laser projekt"],
+    "servers": ["fuchs-mcp-lightburn"]
+  },
+
+  "bildbearbeitung": {
+    "keywords": ["darktable", "raw", "entwickeln", "belichtung", "raw entwickeln",
+                 "filmrolle", "foto entwickeln", "stil anwenden", "darktable export"],
+    "servers": ["fuchs-mcp-darktable"]
+  },
+
+  "libreoffice": {
+    "keywords": ["libreoffice", "writer", "dokument bearbeiten", "text einfügen",
+                 "kommentar writer", "änderungen verfolgen", "track changes writer"],
+    "servers": ["fuchs-mcp-libreoffice"]
+  }
+}

@@ -1,0 +1,47 @@
+{
+  description = "Darwin26 Server Configuration";
+
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    sops-nix.url = "github:Mic92/sops-nix";
+    sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+    unstable.url = "github:nixos/nixpkgs/nixos-unstable";
+    openproject.url = "github:bendlas/openproject-nix";
+    flake-utils.url = "github:numtide/flake-utils";
+    lum.url = "github:haflex/ldap-user-manager/flake";
+    sojus-core.url = "path:/home/fuchs/sojus-core";
+  };
+
+  # Hier nutzen wir @inputs, um alle oben definierten Dinge automatisch zu übernehmen
+  outputs = { 
+	self, 
+	nixpkgs, 
+	sops-nix,
+        lum, 
+	flake-utils,
+        unstable, sojus-core, ... }@inputs:
+    (flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs {
+          inherit system;
+          config = import ./pkgs/pkgsconfig.nix { inherit (nixpkgs) lib; };
+        };
+      in {
+        packages = {
+          # Achte darauf, dass dieser Pfad existiert, sonst auskommentieren:
+          # nspawn-image = import ./pkgs/nspawn-container { inherit nixpkgs system; };
+          openproject = inputs.openproject.packages.${system}.openproject;
+          libresign = pkgs.callPackage ./pkgs/libresign { };
+        };
+      }
+    ))
+    //
+    {
+      nixosConfigurations = {
+        darwin26 = import ./sys/darwin26/default.nix {
+          inherit nixpkgs sops-nix lum unstable sojus-core;
+          system = "x86_64-linux";
+        };
+      };
+    };
+}

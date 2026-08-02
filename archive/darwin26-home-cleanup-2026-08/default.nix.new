@@ -1,0 +1,59 @@
+{ nixpkgs, sops-nix, lum, unstable, sojus-core, system }:
+let
+unstablePkgs = unstable.legacyPackages.${system};
+in
+nixpkgs.lib.nixosSystem {
+  inherit system;
+  specialArgs = {
+    inherit lum system unstablePkgs;
+  };
+  
+  modules = [
+     { nixpkgs.overlays = [ (final: prev: { vikunja = unstablePkgs.vikunja; }) ]; }
+     sops-nix.nixosModules.sops
+
+    # Konfiguration für sops
+    {
+      # Pfad zu deiner verschlüsselten Datei (relativ zu dieser Datei)
+      sops.defaultSopsFile = ../../secrets.yaml;     
+  
+      # Automatische Entschlüsselung mit dem SSH-Key des Servers
+      sops.age.sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+      
+      # Optional: Erstelle die Schlüsseldatei automatisch, falls sie fehlt
+      sops.age.keyFile = "/var/lib/sops-nix/key.txt";
+      # Erlaubt NixOS, den Key aus dem SSH-Key zu generieren, wenn die key.txt noch nicht existiert.
+      sops.age.generateKey = true;
+    }  
+    
+    # Sternenhof CA systemweit vertrauen
+    {
+      security.pki.certificateFiles = [
+        ./sternenhof-ca.crt
+      ];
+    }
+
+    # configuration
+    (import ./base.nix {inherit nixpkgs;})
+    ./hardware-configuration.nix
+    ./software.nix
+    ./users.nix
+    ./dhcp_dns.nix
+    ./openldap.nix
+    (import ./ldap-user-manager.nix {
+      inherit lum system;
+    })    
+    ./coturn.nix
+    ./nextcloud.nix
+    ./jellyfin.nix
+    ./immich.nix
+    ./vikunja.nix
+    ./home-assistant.nix
+    ./ntfy.nix
+    ./n8n.nix
+    
+
+    sojus-core.nixosModules.darwin26
+  ];
+}
+
