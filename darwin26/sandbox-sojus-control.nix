@@ -62,7 +62,11 @@ in {
       ExecStart       = "${pkgs.uv}/bin/uvx --python ${pkgs.python3}/bin/python3 fastmcp run ${script} --transport streamable-http --host 127.0.0.1 --port ${toString port}";
       Restart         = "on-failure";
       RestartSec      = "10s";
-      NoNewPrivileges = true;
+      # NoNewPrivileges blockiert sudo komplett auf Kernel-Ebene (setuid wird
+      # verweigert), unabhängig von sudoers — "sudo: The 'no new privileges'
+      # flag is set" beim Live-Test. Dieser Service MUSS per sudo eskalieren
+      # (genau dafür ist die enge sudoers-Regel oben da), also bleibt das hier
+      # aus, anders als bei den übrigen MCP-Services ohne Eskalationsbedarf.
       PrivateTmp      = true;
     };
   };
