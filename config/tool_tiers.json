@@ -22,6 +22,11 @@
     "sandbox_darwin_start":               2,
     "sandbox_darwin_stop":                2,
     "sandbox_darwin_status":              1,
-    "sandbox_darwin_sync":                3
+    "sandbox_darwin_sync":                3,
+
+    "sandbox_nexus_start":                2,
+    "sandbox_nexus_stop":                 2,
+    "sandbox_nexus_status":               1,
+    "sandbox_nexus_sync":                 3
   }
 }

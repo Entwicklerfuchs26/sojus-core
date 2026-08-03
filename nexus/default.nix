@@ -17,6 +17,9 @@
     ./fuchs-mcp-darktable.nix    # Port 9011 – Darktable Fotografie
     ./fuchs-shell.nix            # Port 8012 – Shell-Zugriff (User sojus, nicht fuchs!)
     ./mcp-approval-proxy.nix     # Phase 2 Tier-Gate vor 9000-9011 (fuchs-shell hat eigenes aus Phase 1)
+    ./sandbox-nexus-container.nix        # sandbox-nexus Testcontainer (Kopie von nixos-config)
+    ./fuchs-sandbox-control-nexus.nix    # Port 9012 – MCP-Steuerung fuer sandbox-nexus (User sojus)
+    ./fuchs-sandbox-nexus-access.nix     # NOPASSWD-sudo fuer fuchs, nur sandbox-nexus-Container
   ];
 
   # ── Firewall: MCP-Ports nur für darwin26 + nexus selbst ─────────────────────
@@ -37,11 +40,13 @@
     # In nixos-fw einhängen (vor dem Default-Drop, da extraCommands vor finalem Reject läuft)
     iptables -A nixos-fw -p tcp --dport 9000:9011 -j mcp-sojus-filter
     iptables -A nixos-fw -p tcp --dport 8012      -j mcp-sojus-filter
+    iptables -A nixos-fw -p tcp --dport 9012      -j mcp-sojus-filter
   '';
 
   networking.firewall.extraStopCommands = ''
     iptables -D nixos-fw -p tcp --dport 9000:9011 -j mcp-sojus-filter 2>/dev/null || true
     iptables -D nixos-fw -p tcp --dport 8012      -j mcp-sojus-filter 2>/dev/null || true
+    iptables -D nixos-fw -p tcp --dport 9012      -j mcp-sojus-filter 2>/dev/null || true
     iptables -F mcp-sojus-filter 2>/dev/null || true
     iptables -X mcp-sojus-filter 2>/dev/null || true
   '';

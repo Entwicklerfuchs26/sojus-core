@@ -94,6 +94,7 @@ let
         - fuchs-stellarium
         - fuchs-lightburn
         - fuchs-shell
+        - fuchs-sandbox-control-nexus
 
     # Darwin26-MCP-Server (127.0.0.1)
     mcp_servers:
@@ -165,6 +166,12 @@ let
       # selbst (scripts/nexus/fuchs-shell-server.py), nicht mehr in core.py.
       fuchs-shell:
         url: "http://192.168.1.40:8012/mcp"
+        connect_timeout: 5
+      # Steuerung für den sandbox-nexus-Testcontainer, läuft dort als
+      # 'sojus' (wie fuchs-shell). Analog zu fuchs-sandbox-control auf
+      # darwin26, aber für Nexus-Systemebene statt sojus-core.
+      fuchs-sandbox-control-nexus:
+        url: "http://192.168.1.40:9012/mcp"
         connect_timeout: 5
 
     platforms:
