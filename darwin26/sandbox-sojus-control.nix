@@ -42,7 +42,7 @@ in {
     # reproduziert). `path` statt environment.PATH, da PATH intern per
     # String-Context verwaltet wird — ein literaler String kollidiert dort
     # ("conflicting definition values" / "0 entries in its context").
-    path = [ "/run/wrappers/bin" ];
+    path = [ "/run/wrappers" ];
 
     environment = {
       HOME                  = "/var/lib/sandbox-sojus-ctl";
