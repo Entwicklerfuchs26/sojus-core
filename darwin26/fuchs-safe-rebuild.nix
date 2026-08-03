@@ -62,12 +62,20 @@ let
     # persistente Container-Rootfs bleibt sonst stumm auf dem allerersten
     # Stand hängen (live reproduziert: sojus-uid blieb nach mehreren Switches
     # + Neustarts bei 1000, obwohl die Host-Config schon 29000 evaluierte).
-    # nixos-container update ist der explizite, immer funktionierende Weg,
-    # unabhängig vom Running-Status. Non-fatal, falls ein Container gerade
-    # nicht existiert.
+    # "nixos-container update" ist die klassische imperative Lösung dafür,
+    # sucht aber per NIX_PATH nach einer Legacy configuration.nix und
+    # scheitert deshalb bei unserem Flake-Setup ("file 'nixos-config' was
+    # not found", live reproduziert). Stattdessen: stop + Rootfs löschen +
+    # start — Testcontainer sind ohnehin Wegwerf-State, alle echten Daten
+    # liegen in den bindMounts (nixos-copy, sojus-core), nicht im Rootfs
+    # selbst. Start provisioniert dann komplett frisch aus der aktuellen
+    # Config. Non-fatal, falls ein Container gerade nicht existiert/läuft.
     for c in sandbox-sojus sandbox-darwin; do
-      log "Aktualisiere Container-Rootfs: $c"
-      sudo nixos-container update "$c" || log "WARNUNG: nixos-container update $c fehlgeschlagen (ignoriert)"
+      log "Reprovisioniere Container-Rootfs: $c"
+      sudo /run/current-system/sw/bin/systemctl stop "container@$c.service" 2>/dev/null || true
+      sudo /run/current-system/sw/bin/rm -rf "/var/lib/nixos-containers/$c"
+      sudo /run/current-system/sw/bin/systemctl start "container@$c.service" \
+        || log "WARNUNG: Neustart von $c fehlgeschlagen (ignoriert)"
     done
 
     git_fuchs add -A
@@ -109,10 +117,11 @@ in {
         { command = "/run/current-system/sw/bin/systemctl status container@sandbox-darwin.service"; options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/systemctl status container@sandbox-darwin.service --no-pager"; options = [ "NOPASSWD" ]; }
 
-        # Manueller Container-Refresh ohne vollen Rebuild-Zyklus (gleicher
-        # Schritt läuft auch automatisch am Ende von safe-rebuild-darwin26.sh)
-        { command = "/run/current-system/sw/bin/nixos-container update sandbox-sojus";  options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/nixos-container update sandbox-darwin"; options = [ "NOPASSWD" ]; }
+        # Manueller Container-Reprovision ohne vollen Rebuild-Zyklus (gleicher
+        # Schritt läuft auch automatisch am Ende von safe-rebuild-darwin26.sh).
+        # Exakte Pfade, kein Wildcard — nur diese beiden Wegwerf-Rootfs.
+        { command = "/run/current-system/sw/bin/rm -rf /var/lib/nixos-containers/sandbox-sojus";  options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/rm -rf /var/lib/nixos-containers/sandbox-darwin"; options = [ "NOPASSWD" ]; }
 
         # Rebuild: nur über den geprüften Wrapper (build-vm vor switch, Git-Audit-Trail)
         { command = "/home/fuchs/bin/safe-rebuild-darwin26.sh"; options = [ "NOPASSWD" ]; }
