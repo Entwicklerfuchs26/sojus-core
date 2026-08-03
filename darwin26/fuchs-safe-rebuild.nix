@@ -57,6 +57,19 @@ let
       || die "switch fehlgeschlagen – System im alten Zustand."
     log "Switch erfolgreich."
 
+    # Deklarative Container werden vom Host-switch NICHT automatisch
+    # reprovisioniert, wenn sie zum Zeitpunkt des Switch nicht liefen — das
+    # persistente Container-Rootfs bleibt sonst stumm auf dem allerersten
+    # Stand hängen (live reproduziert: sojus-uid blieb nach mehreren Switches
+    # + Neustarts bei 1000, obwohl die Host-Config schon 29000 evaluierte).
+    # nixos-container update ist der explizite, immer funktionierende Weg,
+    # unabhängig vom Running-Status. Non-fatal, falls ein Container gerade
+    # nicht existiert.
+    for c in sandbox-sojus sandbox-darwin; do
+      log "Aktualisiere Container-Rootfs: $c"
+      sudo nixos-container update "$c" || log "WARNUNG: nixos-container update $c fehlgeschlagen (ignoriert)"
+    done
+
     git_fuchs add -A
     if git_fuchs diff --cached --quiet; then
       git_fuchs commit --allow-empty -m "post-rebuild: $DESCRIPTION – erfolgreich"
@@ -95,6 +108,11 @@ in {
         { command = "/run/current-system/sw/bin/systemctl stop container@sandbox-darwin.service";   options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/systemctl status container@sandbox-darwin.service"; options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/systemctl status container@sandbox-darwin.service --no-pager"; options = [ "NOPASSWD" ]; }
+
+        # Manueller Container-Refresh ohne vollen Rebuild-Zyklus (gleicher
+        # Schritt läuft auch automatisch am Ende von safe-rebuild-darwin26.sh)
+        { command = "/run/current-system/sw/bin/nixos-container update sandbox-sojus";  options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/nixos-container update sandbox-darwin"; options = [ "NOPASSWD" ]; }
 
         # Rebuild: nur über den geprüften Wrapper (build-vm vor switch, Git-Audit-Trail)
         { command = "/home/fuchs/bin/safe-rebuild-darwin26.sh"; options = [ "NOPASSWD" ]; }
