@@ -36,13 +36,17 @@ let
       log "Pre-rebuild commit erstellt."
     fi
 
+    # sojus-core ist ein path:-Flake-Input und wird in flake.lock per NarHash
+    # gepinnt — ohne --update-input baut nixos-rebuild sonst stillschweigend
+    # die alte, gelockte Kopie (live reproduziert: switch lief in 7s durch,
+    # ohne irgendeine der neuen Dateien zu übernehmen).
     log "Baue VM-Test-Image..."
-    sudo nixos-rebuild build-vm --flake "$FLAKE_DIR#$FLAKE_TARGET" \
+    sudo nixos-rebuild build-vm --flake "$FLAKE_DIR#$FLAKE_TARGET" --update-input sojus-core \
       || die "build-vm fehlgeschlagen – switch abgebrochen."
     log "VM-Build erfolgreich."
 
     log "Führe nixos-rebuild switch durch..."
-    sudo nixos-rebuild switch --flake "$FLAKE_DIR#$FLAKE_TARGET" \
+    sudo nixos-rebuild switch --flake "$FLAKE_DIR#$FLAKE_TARGET" --update-input sojus-core \
       || die "switch fehlgeschlagen – System im alten Zustand."
     log "Switch erfolgreich."
 
