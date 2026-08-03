@@ -1,0 +1,92 @@
+{ config, pkgs, lib, ... }:
+
+let
+  # Gleiches Muster wie nixos-config/modules/ai/sojus.nix auf Nexus: erst
+  # build-vm als Test, erst bei Erfolg switch, davor/danach git-Commit als
+  # Audit-Trail. Für darwin26 (Prod-Host mit Nextcloud/HA/Jellyfin/Immich/...)
+  # bewusst NICHT direkt switch ohne Testbuild.
+  safeRebuildScript = pkgs.writeShellScript "safe-rebuild-darwin26" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    DESCRIPTION="''${1:-auto}"
+    FLAKE_DIR="/etc/nixos"
+    FLAKE_TARGET="darwin26"
+
+    log() { echo "[safe-rebuild] $*"; }
+    die() { echo "[safe-rebuild] FEHLER: $*" >&2; exit 1; }
+
+    git_fuchs() {
+      git -C "$FLAKE_DIR" \
+        -c safe.directory="$FLAKE_DIR" \
+        -c user.name="Sojus-Agent" \
+        -c user.email="sojus@darwin26" \
+        "$@"
+    }
+
+    log "Starte sicheren Rebuild: '$DESCRIPTION'"
+    git config --global --add safe.directory "$FLAKE_DIR" 2>/dev/null || true
+
+    log "Staging Änderungen..."
+    git_fuchs add -A
+    if git_fuchs diff --cached --quiet; then
+      log "Keine Änderungen im Staging – kein pre-rebuild commit nötig."
+    else
+      git_fuchs commit -m "pre-rebuild: $DESCRIPTION"
+      log "Pre-rebuild commit erstellt."
+    fi
+
+    log "Baue VM-Test-Image..."
+    sudo nixos-rebuild build-vm --flake "$FLAKE_DIR#$FLAKE_TARGET" \
+      || die "build-vm fehlgeschlagen – switch abgebrochen."
+    log "VM-Build erfolgreich."
+
+    log "Führe nixos-rebuild switch durch..."
+    sudo nixos-rebuild switch --flake "$FLAKE_DIR#$FLAKE_TARGET" \
+      || die "switch fehlgeschlagen – System im alten Zustand."
+    log "Switch erfolgreich."
+
+    git_fuchs add -A
+    if git_fuchs diff --cached --quiet; then
+      git_fuchs commit --allow-empty -m "post-rebuild: $DESCRIPTION – erfolgreich"
+    else
+      git_fuchs commit -m "post-rebuild: $DESCRIPTION – erfolgreich"
+    fi
+    log "Fertig. System läuft auf neuem Build."
+  '';
+in {
+  # ── safe-rebuild.sh deployen ─────────────────────────────────────────────
+  system.activationScripts.fuchsSafeRebuildBin = {
+    deps = [ "users" ];
+    text = ''
+      install -d -m 750 -o fuchs -g users /home/fuchs/bin
+      install -m 750 -o fuchs -g users \
+        ${safeRebuildScript} \
+        /home/fuchs/bin/safe-rebuild-darwin26.sh
+    '';
+  };
+
+  # ── Sudoers-Whitelist für fuchs ──────────────────────────────────────────
+  # Nur diese Befehle NOPASSWD. Alles andere weiterhin Passwort-Pflicht
+  # (kein blanket sudo NOPASSWD für fuchs auf einem Host mit gemeinsam
+  # genutzten Diensten).
+  security.sudo.extraRules = [
+    {
+      users = [ "fuchs" ];
+      commands = [
+        # Testen/Steuern des Sandbox-Containers
+        { command = "/run/current-system/sw/bin/systemctl start container-sandbox-sojus";  options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl stop container-sandbox-sojus";   options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container-sandbox-sojus"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container-sandbox-sojus --no-pager"; options = [ "NOPASSWD" ]; }
+
+        # Rebuild: nur über den geprüften Wrapper (build-vm vor switch, Git-Audit-Trail)
+        { command = "/home/fuchs/bin/safe-rebuild-darwin26.sh"; options = [ "NOPASSWD" ]; }
+        { command = "/home/fuchs/bin/safe-rebuild-darwin26.sh *"; options = [ "NOPASSWD" ]; }
+
+        # Rohe nixos-rebuild-Aufrufe bleiben absichtlich passwortgeschützt —
+        # safe-rebuild-darwin26.sh ist der einzige NOPASSWD-Rebuild-Pfad.
+      ];
+    }
+  ];
+}

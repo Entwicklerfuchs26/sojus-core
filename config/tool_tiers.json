@@ -12,6 +12,11 @@
     "stellarium_action":                  2,
     "cursor":                             2,
     "selection":                          2,
-    "text":                               2
+    "text":                               2,
+
+    "sandbox_sojus_start":                2,
+    "sandbox_sojus_stop":                 2,
+    "sandbox_sojus_status":               1,
+    "sandbox_sojus_sync":                 3
   }
 }

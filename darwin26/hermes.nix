@@ -79,6 +79,7 @@ let
         - nc-sternenhof
         - fuchs-discord
         - fuchs-email
+        - fuchs-sandbox-control
         # Nexus (192.168.1.40) — optional, nur wenn App läuft
         - fuchs-filesystem
         - fuchs-darktable
@@ -120,6 +121,8 @@ let
         url: "http://127.0.0.1:8011/mcp"
       fuchs-email:
         url: "http://127.0.0.1:8013/mcp"
+      fuchs-sandbox-control:
+        url: "http://127.0.0.1:8015/mcp"
       # Nexus-Server (192.168.1.40) — connect_timeout kurz, da app-abhängig
       fuchs-filesystem:
         url: "http://192.168.1.40:9000/mcp"

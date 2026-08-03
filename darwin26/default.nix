@@ -4,6 +4,9 @@
     ./secrets.nix
     ./tools.nix
     ./hermes.nix
+    ./containers.nix
+    ./sandbox-sojus-control.nix
+    ./fuchs-safe-rebuild.nix
     ./mcp-approval-service.nix
     ./mcp-approval-proxy.nix
     ./open-webui.nix
