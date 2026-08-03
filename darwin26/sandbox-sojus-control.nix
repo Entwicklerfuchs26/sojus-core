@@ -41,7 +41,7 @@ in {
       # Nix-Store (pkgs.sudo dort ist nicht setuid) — Systemd-Units bekommen
       # sonst keinerlei PATH, subprocess.run(["sudo", ...]) würde sonst mit
       # "No such file or directory" scheitern (lokal reproduziert).
-      PATH                   = "/run/wrappers/bin:/run/current-system/sw/bin";
+      PATH                   = lib.mkForce "/run/wrappers/bin:/run/current-system/sw/bin";
       UV_PYTHON             = "${pkgs.python3}/bin/python3";
       UV_PYTHON_PREFERENCE  = "only-system";
       UV_CACHE_DIR          = "/var/lib/sandbox-sojus-ctl/.cache/uv";
