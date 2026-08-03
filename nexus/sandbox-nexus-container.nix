@@ -80,10 +80,15 @@
 
   # ACL für den Container-sojus (uid 29000) — Container teilt UID-Namespace
   # mit dem Host (kein privateUsers), ohne ACL "Permission denied" beim
-  # Betreten von /var/lib/nexus/nixos-config-copy.
+  # Betreten von /var/lib/nexus/nixos-config-copy. mkdir -p hier statt nur
+  # per systemd.tmpfiles.rules: Reihenfolge zwischen tmpfiles und
+  # activationScripts ist nicht garantiert — beim allerersten Rebuild
+  # existierte das Verzeichnis noch nicht, setfacl scheiterte mit "Datei
+  # oder Verzeichnis nicht gefunden" (live auf Nexus reproduziert).
   system.activationScripts.sandboxNexusAcl = {
     deps = [ "users" ];
     text = ''
+      mkdir -p /var/lib/sandbox-nexus
       ${pkgs.acl}/bin/setfacl -R -m u:29000:rwx /var/lib/sandbox-nexus
       ${pkgs.acl}/bin/setfacl -R -d -m u:29000:rwx /var/lib/sandbox-nexus
     '';

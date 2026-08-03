@@ -115,6 +115,7 @@
   system.activationScripts.sandboxDarwinAcl = {
     deps = [ "users" ];
     text = ''
+      mkdir -p /var/lib/sandbox-darwin
       ${pkgs.acl}/bin/setfacl -R -m u:29000:rwx /var/lib/sandbox-darwin
       ${pkgs.acl}/bin/setfacl -R -d -m u:29000:rwx /var/lib/sandbox-darwin
     '';
