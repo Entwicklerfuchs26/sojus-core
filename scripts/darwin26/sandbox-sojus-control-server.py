@@ -32,6 +32,12 @@ PORT = int(os.environ.get("SANDBOX_CONTROL_PORT", "8015"))
 
 SYNC_SCRIPT = os.environ.get("SYNC_SCRIPT", "/var/lib/sandbox-sojus-ctl/bin/sandbox-sojus-sync.sh")
 CONTAINER = "container@sandbox-sojus.service"
+# Absoluter Pfad zwingend: sudoers matched exakt gegen den aufgerufenen Pfad.
+# Ein PATH-aufgelöstes "systemctl" landet über den systemd-Store-Pfad (aus
+# dem `path`-Eintrag des Services), nicht /run/current-system/sw/bin/systemctl
+# — die NOPASSWD-Regel hätte sonst nie gematcht (live reproduziert: "sudo:
+# a password is required" trotz korrekter sudoers-Regel).
+SYSTEMCTL = "/run/current-system/sw/bin/systemctl"
 
 # mcp-approval-service läuft lokal auf darwin26 (gleicher Host).
 APPROVAL_URL = os.environ.get("APPROVAL_URL", "http://127.0.0.1:8014")
@@ -128,20 +134,20 @@ def _await_sync_approval(reason: str) -> tuple[bool, str]:
 def sandbox_sojus_start() -> dict:
     """sandbox-sojus-Container starten (Tier 2, läuft sofort)."""
     log.warning("TIER-2: sandbox_sojus_start")
-    return _run_sudo(["systemctl", "start", CONTAINER])
+    return _run_sudo([SYSTEMCTL, "start", CONTAINER])
 
 
 @mcp.tool()
 def sandbox_sojus_stop() -> dict:
     """sandbox-sojus-Container stoppen (Tier 2, läuft sofort)."""
     log.warning("TIER-2: sandbox_sojus_stop")
-    return _run_sudo(["systemctl", "stop", CONTAINER])
+    return _run_sudo([SYSTEMCTL, "stop", CONTAINER])
 
 
 @mcp.tool()
 def sandbox_sojus_status() -> dict:
     """Status des sandbox-sojus-Containers abfragen (Tier 1, lesend)."""
-    return _run_sudo(["systemctl", "status", CONTAINER, "--no-pager"])
+    return _run_sudo([SYSTEMCTL, "status", CONTAINER, "--no-pager"])
 
 
 @mcp.tool()
