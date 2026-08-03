@@ -68,13 +68,13 @@
       # Host-Verzeichnis stabil bleibt und nicht bei jedem Rebuild verrutscht.
       users.users.sojus = {
         isNormalUser = true;
-        uid = 1000;
+        uid = 29000;
         group = "sojus";
         home = "/var/lib/sojus";
         createHome = true;
         extraGroups = [ "wheel" ];
       };
-      users.groups.sojus.gid = 1000;
+      users.groups.sojus.gid = 29000;
       security.sudo.wheelNeedsPassword = false;
 
       nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -104,16 +104,19 @@
   ];
 
   # sandbox-darwin nutzt denselben UID-Namespace wie der Host (kein
-  # privateUsers) — der Container-sojus (uid 1000) ist dort niemand
-  # Bestimmtes und hat ohne ACL keinen Zugriff auf das fuchs:users-Verzeichnis
-  # (live reproduziert: "Permission denied" beim Betreten von
-  # /var/lib/darwin/nixos-copy). setfacl statt chmod 0755, damit fuchs
-  # weiterhin alleiniger Owner bleibt und nichts world-readable wird.
+  # privateUsers) — der Container-sojus hat ohne ACL keinen Zugriff auf das
+  # fuchs:users-Verzeichnis (live reproduziert: "Permission denied" beim
+  # Betreten von /var/lib/darwin/nixos-copy). setfacl statt chmod 0755,
+  # damit fuchs weiterhin alleiniger Owner bleibt und nichts world-readable
+  # wird. uid 29000 bewusst fernab sowohl der echten Host-User (1000-1002:
+  # mattis/medienbauer/fuchs) als auch der nixbld-Range (30001+) gewählt —
+  # uid 1000 hätte real dem Host-User "mattis" ACL-Zugriff gegeben (live
+  # entdeckt und sofort wieder entfernt, bevor dieser Fix landete).
   system.activationScripts.sandboxDarwinAcl = {
     deps = [ "users" ];
     text = ''
-      ${pkgs.acl}/bin/setfacl -R -m u:1000:rwx /var/lib/sandbox-darwin
-      ${pkgs.acl}/bin/setfacl -R -d -m u:1000:rwx /var/lib/sandbox-darwin
+      ${pkgs.acl}/bin/setfacl -R -m u:29000:rwx /var/lib/sandbox-darwin
+      ${pkgs.acl}/bin/setfacl -R -d -m u:29000:rwx /var/lib/sandbox-darwin
     '';
   };
 }
