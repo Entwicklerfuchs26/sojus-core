@@ -17,6 +17,11 @@
     "sandbox_sojus_start":                2,
     "sandbox_sojus_stop":                 2,
     "sandbox_sojus_status":               1,
-    "sandbox_sojus_sync":                 3
+    "sandbox_sojus_sync":                 3,
+
+    "sandbox_darwin_start":               2,
+    "sandbox_darwin_stop":                2,
+    "sandbox_darwin_status":              1,
+    "sandbox_darwin_sync":                3
   }
 }

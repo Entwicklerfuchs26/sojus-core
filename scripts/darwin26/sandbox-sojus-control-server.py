@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """fuchs-sandbox-control — schmaler MCP-Server auf darwin26 (Port 8015).
 
-Gibt Hermes genau drei Fähigkeiten, um den sandbox-sojus-Container (siehe
-darwin26/containers.nix) selbst zu steuern, während er dort Sojus-Core-
-Änderungen testet — nichts weiter. Kein allgemeines execute_command wie
-fuchs-shell auf Nexus: Start/Stop/Status sind Tier 2 (laufen sofort, laut
-geloggt), Sync (Kopie zurück ins Original) ist Tier 3 und wartet auf eine
-echte Freigabe über mcp-approval-service (HA-Push an Jonas), bevor irgendwas
-geschrieben wird — mirrored von fuchs-shell-server.py's _await_approval.
+Gibt Hermes die Fähigkeit, die sandbox-*-Testcontainer (siehe
+darwin26/containers.nix) selbst zu steuern — nichts weiter. Kein
+allgemeines execute_command wie fuchs-shell auf Nexus: Start/Stop/Status
+sind Tier 2/1 (laufen sofort, Tier 2 laut geloggt), Sync (Kopie zurück ins
+Original) ist Tier 3 und wartet auf eine echte Freigabe über
+mcp-approval-service (HA-Push an Jonas), bevor irgendwas geschrieben wird —
+mirrored von fuchs-shell-server.py's _await_approval.
+
+Zwei Sandboxen, gleiches Muster:
+- sandbox-sojus: Testkopie von sojus-core (Prompts/MCP-Configs/Memory)
+- sandbox-darwin: Testkopie von /etc/nixos (NixOS-Module, echtes
+  nixos-rebuild switch, isoliert im Container)
 
 Läuft als eigener unprivilegierter Service-User (sandbox-sojus-ctl), NICHT
 als fuchs oder hermes. Die zugrunde liegenden Befehle (systemctl start/stop/
-status container-sandbox-sojus, das feste sync-Skript) sind über eine exakte
-NOPASSWD-sudoers-Regel freigegeben, siehe darwin26/sandbox-sojus-control.nix.
+status, die festen sync-Skripte) sind über exakte NOPASSWD-sudoers-Regeln
+freigegeben, siehe darwin26/sandbox-sojus-control.nix.
 """
 
 import json
@@ -30,8 +35,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 PORT = int(os.environ.get("SANDBOX_CONTROL_PORT", "8015"))
 
-SYNC_SCRIPT = os.environ.get("SYNC_SCRIPT", "/var/lib/sandbox-sojus-ctl/bin/sandbox-sojus-sync.sh")
-CONTAINER = "container@sandbox-sojus.service"
+SOJUS_SYNC_SCRIPT = os.environ.get("SYNC_SCRIPT", "/var/lib/sandbox-sojus-ctl/bin/sandbox-sojus-sync.sh")
+DARWIN_SYNC_SCRIPT = os.environ.get("DARWIN_SYNC_SCRIPT", "/var/lib/sandbox-sojus-ctl/bin/sandbox-darwin-sync.sh")
+SOJUS_CONTAINER = "container@sandbox-sojus.service"
+DARWIN_CONTAINER = "container@sandbox-darwin.service"
 # Absoluter Pfad zwingend: sudoers matched exakt gegen den aufgerufenen Pfad.
 # Ein PATH-aufgelöstes "systemctl" landet über den systemd-Store-Pfad (aus
 # dem `path`-Eintrag des Services), nicht /run/current-system/sw/bin/systemctl
@@ -48,10 +55,10 @@ APPROVAL_POLL_INTERVAL = 3
 mcp = FastMCP(
     "fuchs-sandbox-control",
     instructions=(
-        "Steuerung für den sandbox-sojus-Testcontainer auf darwin26. "
-        "sandbox_sojus_start/stop/status laufen sofort. sandbox_sojus_sync "
-        "(Kopie vom Container zurück in /home/fuchs/sojus-core) braucht eine "
-        f"Freigabe durch Jonas — wartet automatisch bis zu {APPROVAL_WAIT_TIMEOUT}s. "
+        "Steuerung für die sandbox-sojus- und sandbox-darwin-Testcontainer auf "
+        "darwin26. *_start/stop/status laufen sofort. *_sync (Kopie vom "
+        "Container zurück ins Original — sojus-core bzw. /etc/nixos) braucht "
+        f"eine Freigabe durch Jonas — wartet automatisch bis zu {APPROVAL_WAIT_TIMEOUT}s. "
         "Erst NACH einem erfolgreichen Sync entscheidet Jonas separat per "
         "nixos-rebuild switch, ob die Änderung live geht."
     ),
@@ -91,7 +98,7 @@ def _approval_request(method: str, path: str, body: dict | None = None) -> dict:
         return json.loads(resp.read())
 
 
-def _await_sync_approval(reason: str) -> tuple[bool, str]:
+def _await_sync_approval(tool: str, reason: str) -> tuple[bool, str]:
     """Fail closed: ohne erreichbaren/konfigurierten approval-service kein Sync."""
     if not APPROVAL_API_TOKEN:
         return False, "⛔ APPROVAL_API_TOKEN nicht konfiguriert — Sync wird sicherheitshalber verweigert."
@@ -99,7 +106,7 @@ def _await_sync_approval(reason: str) -> tuple[bool, str]:
         created = _approval_request("POST", "/approvals", {
             "host": "darwin26",
             "server": "fuchs-sandbox-control",
-            "tool": "sandbox_sojus_sync",
+            "tool": tool,
             "arguments": {"reason": reason},
             "tier": 3,
             "reason": reason,
@@ -134,20 +141,20 @@ def _await_sync_approval(reason: str) -> tuple[bool, str]:
 def sandbox_sojus_start() -> dict:
     """sandbox-sojus-Container starten (Tier 2, läuft sofort)."""
     log.warning("TIER-2: sandbox_sojus_start")
-    return _run_sudo([SYSTEMCTL, "start", CONTAINER])
+    return _run_sudo([SYSTEMCTL, "start", SOJUS_CONTAINER])
 
 
 @mcp.tool()
 def sandbox_sojus_stop() -> dict:
     """sandbox-sojus-Container stoppen (Tier 2, läuft sofort)."""
     log.warning("TIER-2: sandbox_sojus_stop")
-    return _run_sudo([SYSTEMCTL, "stop", CONTAINER])
+    return _run_sudo([SYSTEMCTL, "stop", SOJUS_CONTAINER])
 
 
 @mcp.tool()
 def sandbox_sojus_status() -> dict:
     """Status des sandbox-sojus-Containers abfragen (Tier 1, lesend)."""
-    return _run_sudo([SYSTEMCTL, "status", CONTAINER, "--no-pager"])
+    return _run_sudo([SYSTEMCTL, "status", SOJUS_CONTAINER, "--no-pager"])
 
 
 @mcp.tool()
@@ -157,11 +164,47 @@ def sandbox_sojus_sync(reason: str) -> dict:
     Tier 3 — wartet zuerst auf eine Freigabe durch Jonas (HA-Push über
     mcp-approval-service), bevor irgendetwas geschrieben wird.
     """
-    ok, msg = _await_sync_approval(reason)
+    ok, msg = _await_sync_approval("sandbox_sojus_sync", reason)
     if not ok:
         return {"error": msg, "stdout": "", "stderr": "", "returncode": -1}
     log.warning("SYNC freigegeben, wird ausgeführt: reason=%s", reason)
-    return _run_sudo([SYNC_SCRIPT])
+    return _run_sudo([SOJUS_SYNC_SCRIPT])
+
+
+@mcp.tool()
+def sandbox_darwin_start() -> dict:
+    """sandbox-darwin-Container starten (Tier 2, läuft sofort)."""
+    log.warning("TIER-2: sandbox_darwin_start")
+    return _run_sudo([SYSTEMCTL, "start", DARWIN_CONTAINER])
+
+
+@mcp.tool()
+def sandbox_darwin_stop() -> dict:
+    """sandbox-darwin-Container stoppen (Tier 2, läuft sofort)."""
+    log.warning("TIER-2: sandbox_darwin_stop")
+    return _run_sudo([SYSTEMCTL, "stop", DARWIN_CONTAINER])
+
+
+@mcp.tool()
+def sandbox_darwin_status() -> dict:
+    """Status des sandbox-darwin-Containers abfragen (Tier 1, lesend)."""
+    return _run_sudo([SYSTEMCTL, "status", DARWIN_CONTAINER, "--no-pager"])
+
+
+@mcp.tool()
+def sandbox_darwin_sync(reason: str) -> dict:
+    """Getestete NixOS-Modul-Änderungen vom Container zurück nach /etc/nixos kopieren.
+
+    Tier 3 — wartet zuerst auf eine Freigabe durch Jonas (HA-Push über
+    mcp-approval-service), bevor irgendetwas geschrieben wird. Kopiert nur
+    die Dateien zurück, wendet nichts an — nixos-rebuild switch auf dem
+    echten Host bleibt ein separater, von Jonas ausgeführter Schritt.
+    """
+    ok, msg = _await_sync_approval("sandbox_darwin_sync", reason)
+    if not ok:
+        return {"error": msg, "stdout": "", "stderr": "", "returncode": -1}
+    log.warning("SYNC freigegeben, wird ausgeführt: reason=%s", reason)
+    return _run_sudo([DARWIN_SYNC_SCRIPT])
 
 
 if __name__ == "__main__":

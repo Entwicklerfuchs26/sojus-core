@@ -9,7 +9,7 @@ let
   # Muss mit approvalApiToken in darwin26/mcp-approval-service.nix identisch sein.
   approvalApiToken = "mcp-approval-internal-token-change-in-prod";
 
-  syncScript = pkgs.writeShellScript "sandbox-sojus-sync" ''
+  sojusSyncScript = pkgs.writeShellScript "sandbox-sojus-sync" ''
     #!/usr/bin/env bash
     set -euo pipefail
     SRC="/var/lib/sandbox-sojus/sojus-core/"
@@ -19,7 +19,23 @@ let
     echo "sandbox-sojus sync: $SRC -> $DST OK"
   '';
 
-  syncScriptPath = "/var/lib/sandbox-sojus-ctl/bin/sandbox-sojus-sync.sh";
+  sojusSyncScriptPath = "/var/lib/sandbox-sojus-ctl/bin/sandbox-sojus-sync.sh";
+
+  # Kein --delete hier, anders als beim sojus-Sync: /etc/nixos ist die echte
+  # Produktivkonfiguration des Hosts, nicht nur fuchs' eigenes Repo. Eine
+  # veraltete/unvollständige Testkopie soll niemals Dateien aus der echten
+  # Config LÖSCHEN können — nur überschreiben/ergänzen. Rückgängig machen
+  # geht ohnehin per git in /etc/nixos.
+  darwinSyncScript = pkgs.writeShellScript "sandbox-darwin-sync" ''
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SRC="/var/lib/sandbox-darwin/nixos-copy/"
+    DST="/etc/nixos/"
+    rsync -a --exclude='.git' "$SRC" "$DST"
+    echo "sandbox-darwin sync: $SRC -> $DST OK"
+  '';
+
+  darwinSyncScriptPath = "/var/lib/sandbox-sojus-ctl/bin/sandbox-darwin-sync.sh";
 in {
   users.users.sandbox-sojus-ctl = {
     isSystemUser = true;
@@ -30,7 +46,7 @@ in {
   users.groups.sandbox-sojus-ctl = {};
 
   systemd.services.fuchs-sandbox-control = {
-    description = "Fuchs Sandbox Control — MCP-Steuerung für sandbox-sojus-Container (Port ${toString port})";
+    description = "Fuchs Sandbox Control — MCP-Steuerung für sandbox-sojus/-darwin-Container (Port ${toString port})";
     after       = [ "network-online.target" ];
     wants       = [ "network-online.target" ];
     wantedBy    = [ "multi-user.target" ];
@@ -49,7 +65,8 @@ in {
       UV_PYTHON             = "${pkgs.python3}/bin/python3";
       UV_PYTHON_PREFERENCE  = "only-system";
       UV_CACHE_DIR          = "/var/lib/sandbox-sojus-ctl/.cache/uv";
-      SYNC_SCRIPT            = syncScriptPath;
+      SYNC_SCRIPT            = sojusSyncScriptPath;
+      DARWIN_SYNC_SCRIPT     = darwinSyncScriptPath;
       APPROVAL_URL           = "http://127.0.0.1:8014";
       APPROVAL_API_TOKEN     = approvalApiToken;
       APPROVAL_WAIT_TIMEOUT  = "90";
@@ -78,13 +95,14 @@ in {
     deps = [ "users" ];
     text = ''
       install -d -m 750 -o sandbox-sojus-ctl -g sandbox-sojus-ctl /var/lib/sandbox-sojus-ctl/bin
-      install -m 750 ${syncScript} ${syncScriptPath}
+      install -m 750 ${sojusSyncScript} ${sojusSyncScriptPath}
+      install -m 750 ${darwinSyncScript} ${darwinSyncScriptPath}
     '';
   };
 
   # Nur diese exakten Befehle, sonst DENY by default. Kein nixos-rebuild,
-  # kein allgemeines systemctl — dieser User darf ausschließlich den
-  # sandbox-sojus-Container an/aus schalten und die feste Sync-Kopie fahren.
+  # kein allgemeines systemctl — dieser User darf ausschließlich die
+  # sandbox-*-Container an/aus schalten und die festen Sync-Kopien fahren.
   security.sudo.extraRules = [
     {
       users = [ "sandbox-sojus-ctl" ];
@@ -93,7 +111,13 @@ in {
         { command = "/run/current-system/sw/bin/systemctl stop container@sandbox-sojus.service";   options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/systemctl status container@sandbox-sojus.service"; options = [ "NOPASSWD" ]; }
         { command = "/run/current-system/sw/bin/systemctl status container@sandbox-sojus.service --no-pager"; options = [ "NOPASSWD" ]; }
-        { command = syncScriptPath; options = [ "NOPASSWD" ]; }
+        { command = sojusSyncScriptPath; options = [ "NOPASSWD" ]; }
+
+        { command = "/run/current-system/sw/bin/systemctl start container@sandbox-darwin.service";  options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl stop container@sandbox-darwin.service";   options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container@sandbox-darwin.service"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container@sandbox-darwin.service --no-pager"; options = [ "NOPASSWD" ]; }
+        { command = darwinSyncScriptPath; options = [ "NOPASSWD" ]; }
       ];
     }
   ];
