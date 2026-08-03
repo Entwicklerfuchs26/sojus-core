@@ -35,13 +35,17 @@ in {
     wants       = [ "network-online.target" ];
     wantedBy    = [ "multi-user.target" ];
 
+    # sudo liegt als setuid-Wrapper unter /run/wrappers/bin, NICHT im
+    # Nix-Store (pkgs.sudo dort ist nicht setuid) — ohne diesen Eintrag
+    # bekommt der Service keinerlei PATH, subprocess.run(["sudo", ...])
+    # würde sonst mit "No such file or directory" scheitern (lokal
+    # reproduziert). `path` statt environment.PATH, da PATH intern per
+    # String-Context verwaltet wird — ein literaler String kollidiert dort
+    # ("conflicting definition values" / "0 entries in its context").
+    path = [ "/run/wrappers/bin" ];
+
     environment = {
       HOME                  = "/var/lib/sandbox-sojus-ctl";
-      # sudo liegt als setuid-Wrapper unter /run/wrappers/bin, NICHT im
-      # Nix-Store (pkgs.sudo dort ist nicht setuid) — Systemd-Units bekommen
-      # sonst keinerlei PATH, subprocess.run(["sudo", ...]) würde sonst mit
-      # "No such file or directory" scheitern (lokal reproduziert).
-      PATH                   = lib.mkForce "/run/wrappers/bin:/run/current-system/sw/bin";
       UV_PYTHON             = "${pkgs.python3}/bin/python3";
       UV_PYTHON_PREFERENCE  = "only-system";
       UV_CACHE_DIR          = "/var/lib/sandbox-sojus-ctl/.cache/uv";
