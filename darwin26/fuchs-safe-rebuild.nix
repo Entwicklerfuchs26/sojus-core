@@ -37,16 +37,23 @@ let
     fi
 
     # sojus-core ist ein path:-Flake-Input und wird in flake.lock per NarHash
-    # gepinnt — ohne --update-input baut nixos-rebuild sonst stillschweigend
-    # die alte, gelockte Kopie (live reproduziert: switch lief in 7s durch,
-    # ohne irgendeine der neuen Dateien zu übernehmen).
+    # gepinnt. --update-input separat auf build-vm UND switch zu geben, hat
+    # live zu einem veralteten Lock geführt (zwei getrennte Resolve-Events,
+    # switch landete auf einem älteren NarHash als der tatsächliche
+    # Verzeichnisinhalt). Deshalb: Lock EINMAL explizit vorab aktualisieren,
+    # danach build-vm/switch ohne eigenes --update-input – beide nutzen dann
+    # denselben, bereits geschriebenen Lock-Stand.
+    log "Aktualisiere sojus-core Flake-Lock..."
+    nix flake lock --update-input sojus-core "$FLAKE_DIR" \
+      || die "flake lock update fehlgeschlagen."
+
     log "Baue VM-Test-Image..."
-    sudo nixos-rebuild build-vm --flake "$FLAKE_DIR#$FLAKE_TARGET" --update-input sojus-core \
+    sudo nixos-rebuild build-vm --flake "$FLAKE_DIR#$FLAKE_TARGET" \
       || die "build-vm fehlgeschlagen – switch abgebrochen."
     log "VM-Build erfolgreich."
 
     log "Führe nixos-rebuild switch durch..."
-    sudo nixos-rebuild switch --flake "$FLAKE_DIR#$FLAKE_TARGET" --update-input sojus-core \
+    sudo nixos-rebuild switch --flake "$FLAKE_DIR#$FLAKE_TARGET" \
       || die "switch fehlgeschlagen – System im alten Zustand."
     log "Switch erfolgreich."
 
