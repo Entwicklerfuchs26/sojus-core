@@ -75,10 +75,10 @@ in {
       users = [ "fuchs" ];
       commands = [
         # Testen/Steuern des Sandbox-Containers
-        { command = "/run/current-system/sw/bin/systemctl start container-sandbox-sojus";  options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl stop container-sandbox-sojus";   options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl status container-sandbox-sojus"; options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl status container-sandbox-sojus --no-pager"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl start container@sandbox-sojus.service";  options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl stop container@sandbox-sojus.service";   options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container@sandbox-sojus.service"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container@sandbox-sojus.service --no-pager"; options = [ "NOPASSWD" ]; }
 
         # Rebuild: nur über den geprüften Wrapper (build-vm vor switch, Git-Audit-Trail)
         { command = "/home/fuchs/bin/safe-rebuild-darwin26.sh"; options = [ "NOPASSWD" ]; }

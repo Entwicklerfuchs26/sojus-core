@@ -31,7 +31,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 PORT = int(os.environ.get("SANDBOX_CONTROL_PORT", "8015"))
 
 SYNC_SCRIPT = os.environ.get("SYNC_SCRIPT", "/var/lib/sandbox-sojus-ctl/bin/sandbox-sojus-sync.sh")
-CONTAINER = "container-sandbox-sojus"
+CONTAINER = "container@sandbox-sojus.service"
 
 # mcp-approval-service läuft lokal auf darwin26 (gleicher Host).
 APPROVAL_URL = os.environ.get("APPROVAL_URL", "http://127.0.0.1:8014")

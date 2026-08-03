@@ -76,10 +76,10 @@ in {
     {
       users = [ "sandbox-sojus-ctl" ];
       commands = [
-        { command = "/run/current-system/sw/bin/systemctl start container-sandbox-sojus";  options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl stop container-sandbox-sojus";   options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl status container-sandbox-sojus"; options = [ "NOPASSWD" ]; }
-        { command = "/run/current-system/sw/bin/systemctl status container-sandbox-sojus --no-pager"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl start container@sandbox-sojus.service";  options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl stop container@sandbox-sojus.service";   options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container@sandbox-sojus.service"; options = [ "NOPASSWD" ]; }
+        { command = "/run/current-system/sw/bin/systemctl status container@sandbox-sojus.service --no-pager"; options = [ "NOPASSWD" ]; }
         { command = syncScriptPath; options = [ "NOPASSWD" ]; }
       ];
     }
