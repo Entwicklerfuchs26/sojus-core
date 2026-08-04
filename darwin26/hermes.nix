@@ -65,18 +65,29 @@ let
     # für ein simples "hallo"), was regelmäßig Anthropic-API-Timeouts +
     # Retries ausgelöst hat (Latenz zwischen 3s und 70+s je nach Request).
     tools:
+      # Empirisch getestet (3x, verschiedene enabled-Werte): tool_search wirkt
+      # auf dem api_server-Endpunkt (/v1/chat/completions) NICHT — Prompt blieb
+      # bei identischen 15.7k Tokens egal ob auto/on/aus. Vermutlich sendet
+      # dieser Pfad aus OpenAI-API-Kompatibilität bewusst immer das volle
+      # tools-Array. "auto" (Default) bleibt trotzdem gesetzt, falls das in
+      # einer künftigen Hermes-Version doch greift — die eigentliche Latenz-
+      # Lösung ist die gekürzte platform_toolsets-Liste unten.
       tool_search:
-        # "auto" hat die Deferral-Heuristik bei unserer Toolmenge (~25
-        # MCP-Server) nicht ausgelöst (Prompt blieb bei 15.7k Tokens) — mit
-        # "on" wird IMMER deferred, unabhängig von der internen Größenschätzung.
-        enabled: "on"
+        enabled: auto
 
     # MCP-Server explizit für api_server freigeben (direkte Namen-Liste)
     # hermes-api-server = Built-in Composite (file, web, code etc.)
+    # Bewusst NUR darwin26-lokale Server, die ohne laufende Nexus-Apps immer
+    # erreichbar sind — die Nexus-Kreativ-Tools (Blender/FreeCAD/OBS/Vivaldi/
+    # LibreOffice/DaVinci/Stellarium/Lightburn/Darktable/Handbrake/Hyprland/
+    # Filesystem/Shell/Sandbox-Control-Nexus) sind raus: sie scheiterten bei
+    # jedem Hermes-Start ohnehin mit 3 Verbindungsversuchen (Apps laufen
+    # nicht), kosteten unnötig Prompt-Tokens UND Timeout-Risiko im
+    # Sojus-Chat. Für Nexus-Steuerung bleibt der direkte MCP-Weg (Claude Code)
+    # bestehen, das hier betrifft nur was Hermes per Chat ansteuern kann.
     platform_toolsets:
       api_server:
         - hermes-api-server
-        # Darwin26
         - nc-weites-feld
         - nc-weites-feld-extra
         - fuchs-openproject
@@ -90,21 +101,6 @@ let
         - fuchs-discord
         - fuchs-email
         - fuchs-sandbox-control
-        # Nexus (192.168.1.40) — optional, nur wenn App läuft
-        - fuchs-filesystem
-        - fuchs-darktable
-        - fuchs-handbrake
-        - fuchs-hyprland
-        - fuchs-vivaldi
-        - fuchs-obs
-        - fuchs-libreoffice
-        - fuchs-freecad
-        - fuchs-davinci
-        - fuchs-blender
-        - fuchs-stellarium
-        - fuchs-lightburn
-        - fuchs-shell
-        - fuchs-sandbox-control-nexus
 
     # Darwin26-MCP-Server (127.0.0.1)
     mcp_servers:
