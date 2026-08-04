@@ -66,7 +66,10 @@ let
     # Retries ausgelöst hat (Latenz zwischen 3s und 70+s je nach Request).
     tools:
       tool_search:
-        enabled: auto
+        # "auto" hat die Deferral-Heuristik bei unserer Toolmenge (~25
+        # MCP-Server) nicht ausgelöst (Prompt blieb bei 15.7k Tokens) — mit
+        # "on" wird IMMER deferred, unabhängig von der internen Größenschätzung.
+        enabled: "on"
 
     # MCP-Server explizit für api_server freigeben (direkte Namen-Liste)
     # hermes-api-server = Built-in Composite (file, web, code etc.)
