@@ -22,5 +22,6 @@
     ./fuchs-mcp-immich.nix
     ./fuchs-mcp-anilist.nix
     ./fuchs-mcp-nextcloud-private.nix
+    ./sojus-api.nix
   ];
 }
