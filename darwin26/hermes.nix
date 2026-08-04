@@ -57,9 +57,16 @@ let
         drauf ankommt, situativ auch mal zynisch. Kein Drumherum-Gerede, keine
         überflüssigen Bestätigungsfragen wenn klar ist was zu tun ist.
 
-    tool_search:
-      enabled: true
-      mode: auto
+    # WICHTIG: tool_search gehört unter "tools:", nicht top-level — ein
+    # top-level "tool_search:"-Key wird von Hermes schlicht ignoriert (mit der
+    # offiziellen Doku unter hermes-agent.nousresearch.com verifiziert). Mit
+    # dem alten (falschen) Schema wurden bei JEDER Anfrage die vollen
+    # JSON-Schemas aller ~25 MCP-Server eager geladen (~15.7k Prompt-Tokens
+    # für ein simples "hallo"), was regelmäßig Anthropic-API-Timeouts +
+    # Retries ausgelöst hat (Latenz zwischen 3s und 70+s je nach Request).
+    tools:
+      tool_search:
+        enabled: auto
 
     # MCP-Server explizit für api_server freigeben (direkte Namen-Liste)
     # hermes-api-server = Built-in Composite (file, web, code etc.)
