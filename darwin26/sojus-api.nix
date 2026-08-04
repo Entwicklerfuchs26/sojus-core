@@ -11,6 +11,7 @@ let
     uvicorn
     python-multipart
     websockets
+    httpx
   ]);
 in {
   options.services.sojusApi = {
@@ -30,6 +31,26 @@ in {
       type = lib.types.port;
       default = 7430;
       description = "Port der Sojus-Chat-REST-API/WebSocket.";
+    };
+
+    hermesUrl = lib.mkOption {
+      type = lib.types.str;
+      # Hermes läuft als eigener Service auf demselben Host, siehe darwin26/hermes.nix.
+      default = "http://127.0.0.1:3002/v1/chat/completions";
+      description = "OpenAI-kompatibler Chat-Completions-Endpunkt von Hermes.";
+    };
+
+    # Muss mit hermesApiKey in darwin26/hermes.nix übereinstimmen.
+    hermesApiKey = lib.mkOption {
+      type = lib.types.str;
+      default = "hermes-internal-key-change-in-prod";
+      description = "API-Key für den Hermes-API-Server (siehe darwin26/hermes.nix).";
+    };
+
+    hermesModel = lib.mkOption {
+      type = lib.types.str;
+      default = "claude-haiku-4-5-20251001";
+      description = "Modell-ID, die Hermes für Chat-Completions verwenden soll.";
     };
   };
 
@@ -57,6 +78,9 @@ in {
         SOJUS_API_DB_DIR          = cfg.dbDir;
         SOJUS_API_ATTACHMENTS_DIR = cfg.attachmentsDir;
         SOJUS_API_PORT            = toString cfg.port;
+        HERMES_URL                = cfg.hermesUrl;
+        HERMES_API_KEY            = cfg.hermesApiKey;
+        HERMES_MODEL              = cfg.hermesModel;
       };
 
       serviceConfig = {

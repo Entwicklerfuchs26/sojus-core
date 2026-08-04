@@ -4,7 +4,9 @@
 # main() startet uvicorn direkt), Konfiguration ausschließlich über
 # Umgebungsvariablen (siehe darwin26/sojus-api.nix).
 
+import asyncio
 import json
+import logging
 import os
 import sqlite3
 import struct
@@ -13,13 +15,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import httpx
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
+logger = logging.getLogger("sojus-api")
+
 DB_DIR = Path(os.environ.get("SOJUS_API_DB_DIR", "/var/lib/sojus-api"))
 ATTACHMENTS_DIR = Path(os.environ.get("SOJUS_API_ATTACHMENTS_DIR", "/var/lib/sojus-api/attachments"))
 DB_PATH = DB_DIR / "context.db"
+
+# Hermes (Nous Research Agent, OpenAI-kompatible API) — generiert die
+# Assistant-Antworten. Läuft als eigener Service auf demselben Host
+# (siehe darwin26/hermes.nix), daher per Default über localhost erreichbar.
+HERMES_URL = os.environ.get("HERMES_URL", "http://127.0.0.1:3002/v1/chat/completions")
+HERMES_API_KEY = os.environ.get("HERMES_API_KEY", "")
+HERMES_MODEL = os.environ.get("HERMES_MODEL", "claude-haiku-4-5-20251001")
+HERMES_CONTEXT_SIZE = int(os.environ.get("HERMES_CONTEXT_SIZE", "20"))
+# Hermes durchläuft pro Anfrage Tool-Registry-Checks + Modellaufruf — das
+# dauert erfahrungsgemäß mehrere zehn Sekunden, daher großzügiger Timeout.
+HERMES_TIMEOUT = float(os.environ.get("HERMES_TIMEOUT", "180"))
 
 DB_DIR.mkdir(parents=True, exist_ok=True)
 ATTACHMENTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -119,8 +135,7 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/messages")
-async def create_message(msg: MessageIn):
+def insert_message_row(msg: MessageIn) -> dict:
     timestamp = datetime.now(timezone.utc).isoformat()
     metadata_json = json.dumps(msg.metadata) if msg.metadata is not None else None
     conn = get_db()
@@ -133,9 +148,52 @@ async def create_message(msg: MessageIn):
     new_id = cur.lastrowid
     row = conn.execute("SELECT * FROM messages WHERE id = ?", (new_id,)).fetchone()
     conn.close()
-    message = row_to_message(row)
+    return row_to_message(row)
+
+
+@app.post("/messages")
+async def create_message(msg: MessageIn):
+    message = insert_message_row(msg)
     await manager.broadcast({"type": "new_message", "message": message})
+    if msg.role == "user":
+        asyncio.create_task(generate_hermes_reply())
     return message
+
+
+async def generate_hermes_reply() -> None:
+    # Läuft losgelöst vom auslösenden Request (create_task) — der Client
+    # bekommt sein POST /messages sofort bestätigt, die Antwort kommt
+    # Sekunden später separat per WebSocket-Broadcast rein.
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT * FROM messages ORDER BY id DESC LIMIT ?", (HERMES_CONTEXT_SIZE,)
+    ).fetchall()
+    conn.close()
+    context = [row_to_message(r) for r in reversed(rows)]
+    hermes_messages = [
+        {"role": m["role"], "content": m["content"]}
+        for m in context
+        if m["role"] in ("user", "assistant") and m["content"]
+    ]
+    if not hermes_messages:
+        return
+
+    try:
+        async with httpx.AsyncClient(timeout=HERMES_TIMEOUT) as client:
+            resp = await client.post(
+                HERMES_URL,
+                headers={"Authorization": f"Bearer {HERMES_API_KEY}"},
+                json={"model": HERMES_MODEL, "messages": hermes_messages},
+            )
+            resp.raise_for_status()
+            data = resp.json()
+        reply_text = data["choices"][0]["message"]["content"]
+    except Exception:
+        logger.exception("Hermes-Anfrage fehlgeschlagen")
+        reply_text = "⚠️ Hermes antwortet gerade nicht (Fehler bei der Anfrage)."
+
+    reply_message = insert_message_row(MessageIn(role="assistant", content=reply_text))
+    await manager.broadcast({"type": "new_message", "message": reply_message})
 
 
 @app.get("/messages")
