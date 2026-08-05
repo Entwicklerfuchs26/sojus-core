@@ -65,15 +65,22 @@ let
     # für ein simples "hallo"), was regelmäßig Anthropic-API-Timeouts +
     # Retries ausgelöst hat (Latenz zwischen 3s und 70+s je nach Request).
     tools:
-      # Empirisch getestet (3x, verschiedene enabled-Werte): tool_search wirkt
-      # auf dem api_server-Endpunkt (/v1/chat/completions) NICHT — Prompt blieb
-      # bei identischen 15.7k Tokens egal ob auto/on/aus. Vermutlich sendet
-      # dieser Pfad aus OpenAI-API-Kompatibilität bewusst immer das volle
-      # tools-Array. "auto" (Default) bleibt trotzdem gesetzt, falls das in
-      # einer künftigen Hermes-Version doch greift — die eigentliche Latenz-
-      # Lösung ist die gekürzte platform_toolsets-Liste unten.
+      # KORRIGIERT 2026-08-05: Der frühere "auto/on/aus macht keinen
+      # Unterschied"-Befund war ein Deploy-Fehler, kein Hermes-Bug — Config-
+      # Inhalt-Änderungen brauchen einen manuellen `systemctl restart
+      # hermes-agent` (NixOS-Switch restartet bei reinen ExecStartPre-Content-
+      # Changes nicht automatisch), das wurde beim Test vermutlich vergessen.
+      #
+      # Quelle: tools/tool_search.py im hermes-agent-Paket (per uvx lokal
+      # inspiziert). "auto" aktiviert das Bridging (tool_search/describe/call
+      # ersetzen die vollen MCP-Schemas) nur, wenn die Tool-Defs >= 10% des
+      # Context-Windows fressen (Fallback ohne auflösbare context_length:
+      # fixer 20.000-Token-Cutoff). Unsere ~14.7k Tokens Tool-Payload liegen
+      # knapp DARUNTER — "auto" entscheidet also legitim "lohnt sich nicht"
+      # und lässt die vollen Schemas durch. "on" erzwingt das Bridging
+      # unconditional, unabhängig von der Größe — das ist was wir wollen.
       tool_search:
-        enabled: auto
+        enabled: on
 
     # MCP-Server explizit für api_server freigeben (direkte Namen-Liste)
     # hermes-api-server = Built-in Composite (file, web, code etc.)
