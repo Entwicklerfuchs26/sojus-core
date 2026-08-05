@@ -65,20 +65,32 @@ let
     # für ein simples "hallo"), was regelmäßig Anthropic-API-Timeouts +
     # Retries ausgelöst hat (Latenz zwischen 3s und 70+s je nach Request).
     tools:
-      # KORRIGIERT 2026-08-05: Der frühere "auto/on/aus macht keinen
-      # Unterschied"-Befund war ein Deploy-Fehler, kein Hermes-Bug — Config-
-      # Inhalt-Änderungen brauchen einen manuellen `systemctl restart
-      # hermes-agent` (NixOS-Switch restartet bei reinen ExecStartPre-Content-
-      # Changes nicht automatisch), das wurde beim Test vermutlich vergessen.
+      # VERIFIZIERT 2026-08-05 (live gegen /v1/chat/completions getestet,
+      # per tool_choice-Zwang auf "tool_search" + "liste alle deine Tools"-
+      # Prompt): Das Bridging (tool_search/tool_describe/tool_call ersetzen
+      # die vollen MCP-Schemas) war schon VOR diesem Commit unter "auto"
+      # aktiv — der reale deferrable-Tool-Anteil (~350+ MCP-Tools über alle
+      # platform_toolsets) liegt weit über jedem denkbaren Cutoff, "auto"
+      # hat also längst korrekt ausgelöst. Der ältere "auto/on/aus macht
+      # keinen Unterschied"-Befund war insofern richtig beobachtet, nur
+      # falsch erklärt — es lag nicht an einem kaputten api_server-Pfad,
+      # sondern daran, dass alle drei Modi hier dasselbe Ergebnis liefern.
       #
-      # Quelle: tools/tool_search.py im hermes-agent-Paket (per uvx lokal
-      # inspiziert). "auto" aktiviert das Bridging (tool_search/describe/call
-      # ersetzen die vollen MCP-Schemas) nur, wenn die Tool-Defs >= 10% des
-      # Context-Windows fressen (Fallback ohne auflösbare context_length:
-      # fixer 20.000-Token-Cutoff). Unsere ~14.7k Tokens Tool-Payload liegen
-      # knapp DARUNTER — "auto" entscheidet also legitim "lohnt sich nicht"
-      # und lässt die vollen Schemas durch. "on" erzwingt das Bridging
-      # unconditional, unabhängig von der Größe — das ist was wir wollen.
+      # Der stabile ~15.7k-Tokens-Sockel pro Request ist NICHT MCP-Schemas,
+      # sondern System-Prompt (~900 Tokens) + Hermes' 16 eingebaute
+      # Core-Tools (execute_code, terminal, patch, memory, cronjob,
+      # vision_analyze, skill_manage, skill_view, skills_list,
+      # session_search, todo, process, read_file, write_file, search_files,
+      # delegate_task) + die 3 Bridge-Tools. Core-Tools werden laut
+      # tools/tool_search.py NIE deferred ("Always-load means always-load.
+      # No exceptions.") — das ist kein Config-Hebel, sondern hartkodiertes
+      # Hermes-Design. Weiter runter geht nur über disabled_toolsets für
+      # ungenutzte Core-Tools, nicht über tool_search.
+      #
+      # "on" bleibt trotzdem gesetzt statt "auto": macht das Verhalten
+      # deterministisch statt von einer Tokenschätzung abhängig, falls der
+      # deferrable-Anteil durch spätere platform_toolsets-Änderungen mal
+      # unter einen Cutoff rutschen sollte.
       tool_search:
         enabled: on
 
