@@ -3,7 +3,14 @@
   imports = [
     ./secrets.nix
     ./tools.nix
-    ./hermes.nix
+    # Hermes-Engine + Chat-API, jetzt modularisiert (modules/sojus-agent.nix)
+    # statt fest verdrahtet — siehe instances/ für die konkreten Instanzen.
+    # jonas.nix ersetzt das frühere hermes.nix + sojus-api.nix 1:1 funktional
+    # (siehe archive/hermes-sojus-api-legacy-2026-08/ für die Vorgänger).
+    ../instances/jonas.nix
+    ../instances/kaira.nix
+    (import ../modules/sojus-sandbox.nix { instanceName = "kaira"; })
+    ./nc-talk-bot.nix
     ./containers.nix
     ./sandbox-sojus-control.nix
     ./fuchs-safe-rebuild.nix
@@ -22,6 +29,5 @@
     ./fuchs-mcp-immich.nix
     ./fuchs-mcp-anilist.nix
     ./fuchs-mcp-nextcloud-private.nix
-    ./sojus-api.nix
   ];
 }

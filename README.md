@@ -6,10 +6,14 @@ NixOS-Flake mit den MCP-Services und der Agent-Engine für Jonas' Digital-Life-O
 
 ## Aktueller Stand
 
-**Hermes ist die Agent-Engine.** Läuft als `hermes-agent.service` auf darwin26,
-Port 3002, OpenAI-kompatible API, Modell `claude-haiku-4-5-20251001`, mit
-`tool_search` (mode: auto) über alle angebundenen MCP-Server. Open WebUI
-(`sojus.sternenhof.space`) spricht mit Hermes.
+**Hermes ist die Agent-Engine**, jetzt als parametrisiertes Modul
+(`modules/sojus-agent.nix`) statt fest verdrahtet — jede Instanz (siehe
+`instances/`) bekommt ihren eigenen User, Service, Port und ihre eigene
+SOUL.md. Jonas' Instanz läuft als `hermes-agent.service` auf darwin26, Port
+3002, OpenAI-kompatible API, Modell `claude-haiku-4-5-20251001`, mit
+`tool_search` (mode: on) über alle angebundenen MCP-Server. Open WebUI
+(`sojus.sternenhof.space`) spricht mit Hermes. Eine zweite Instanz ("kaira",
+Port 3010) läuft eigenständig daneben, ohne Zugriff auf Jonas' Daten.
 
 Der frühere Agent-Stack ("Sojus Core", core.py-basiert) ist archiviert, siehe
 [`archive/sojus-core-legacy/`](archive/sojus-core-legacy/) — Hermes ersetzt ihn
@@ -19,7 +23,9 @@ MCP war redundant dazu).
 ## Struktur
 
 ```
-darwin26/   NixOS-Module für darwin26 (Server): hermes.nix, MCP-Server, Secrets
+modules/    Parametrisierte NixOS-Module: Agent-Engine, MCP-Liste, Sandbox, Secrets
+instances/  Konkrete Instanzen (jonas, kaira) — Parameter für modules/
+darwin26/   NixOS-Module für darwin26 (Server): MCP-Server, Secrets, Approval-Proxy
 nexus/      NixOS-Module für nexus (Desktop): 12 lokale MCP-Services (Ports 9000-9011)
 scripts/    Python-Quellcode der MCP-Server, referenziert aus den .nix-Modulen
 config/     Tool-Konfiguration
@@ -55,3 +61,13 @@ nur dann einen Service-Restart aus, wenn sich die Unit-Definition selbst ändert
 
 Bewusst nicht gelöscht, falls einzelne Konzepte (z.B. das Tier-Gating für
 gefährliche Shell-Befehle) für spätere Hermes-Erweiterungen relevant werden.
+
+`archive/hermes-sojus-api-legacy-2026-08/` enthält die Vorgänger von
+`modules/sojus-agent.nix`:
+
+- `hermes.nix` — das frühere, fest verdrahtete Hermes-Modul (nur Jonas' Instanz)
+- `sojus-api.nix` — die frühere, eigenständige Chat-API (options.services.sojusApi)
+
+Beide Funktionalitäten stecken jetzt gebündelt in `modules/sojus-agent.nix`,
+instanziiert über `instances/jonas.nix` (identische User-/Port-/Key-Werte, rein
+funktional unverändert) und `instances/kaira.nix`.
