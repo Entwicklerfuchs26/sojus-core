@@ -130,6 +130,10 @@ class TTSIn(BaseModel):
     text: str
 
 
+class MessageEdit(BaseModel):
+    content: str
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -226,6 +230,53 @@ async def delete_message(message_id: int):
     conn.close()
     await manager.broadcast({"type": "message_deleted", "id": message_id})
     return {"status": "deleted", "id": message_id}
+
+
+@app.patch("/messages/{message_id}")
+async def edit_message(message_id: int, body: MessageEdit):
+    conn = get_db()
+    row = conn.execute("SELECT id FROM messages WHERE id = ?", (message_id,)).fetchone()
+    if row is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Nachricht nicht gefunden")
+    conn.execute("UPDATE messages SET content = ? WHERE id = ?", (body.content, message_id))
+    conn.commit()
+    updated = conn.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
+    conn.close()
+    message = row_to_message(updated)
+    await manager.broadcast({"type": "message_updated", "message": message})
+    return message
+
+
+@app.post("/messages/{message_id}/regenerate")
+async def regenerate_reply(message_id: int):
+    # Nur für User-Nachrichten sinnvoll: löscht (falls vorhanden) die direkt
+    # darauffolgende Assistant-Antwort und lässt Hermes neu antworten. Geht
+    # davon aus, dass die Nachricht die letzte im Verlauf ist (typischer
+    # "Regenerate"-Anwendungsfall) — bei älteren Nachrichten mit späterem
+    # Verlauf bezieht sich die neue Antwort trotzdem auf den GESAMTEN
+    # aktuellen Kontext, nicht nur auf den Stand zum Zeitpunkt dieser Nachricht.
+    conn = get_db()
+    row = conn.execute("SELECT * FROM messages WHERE id = ?", (message_id,)).fetchone()
+    if row is None:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Nachricht nicht gefunden")
+    if row["role"] != "user":
+        conn.close()
+        raise HTTPException(status_code=400, detail="Nur User-Nachrichten können neu beantwortet werden")
+    next_row = conn.execute(
+        "SELECT id, role FROM messages WHERE id > ? ORDER BY id ASC LIMIT 1", (message_id,)
+    ).fetchone()
+    deleted_id = None
+    if next_row is not None and next_row["role"] == "assistant":
+        conn.execute("DELETE FROM messages WHERE id = ?", (next_row["id"],))
+        conn.commit()
+        deleted_id = next_row["id"]
+    conn.close()
+    if deleted_id is not None:
+        await manager.broadcast({"type": "message_deleted", "id": deleted_id})
+    asyncio.create_task(generate_hermes_reply())
+    return {"status": "regenerating"}
 
 
 @app.post("/attachments")
