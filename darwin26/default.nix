@@ -10,7 +10,7 @@
     ../instances/jonas.nix
     ../instances/kaira.nix
     (import ../modules/sojus-sandbox.nix { instanceName = "kaira"; })
-    ./nc-talk-bot.nix
+    # ./nc-talk-bot.nix  # TEMP auskommentiert: Secret kaira/nc-talk-bot fehlt noch in secrets.yaml
     ./containers.nix
     ./sandbox-sojus-control.nix
     ./fuchs-safe-rebuild.nix
