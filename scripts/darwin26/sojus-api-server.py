@@ -81,6 +81,18 @@ init_db()
 app = FastAPI(title="Sojus Chat API")
 
 
+def estimate_tokens(text: Optional[str]) -> int:
+    # Kein echter Tokenizer verfügbar (Anthropic veröffentlicht keinen lokalen
+    # BPE-Vocab für Claude, ein exakter Call gegen /v1/messages/count_tokens
+    # bräuchte einen echten API-Key pro Nachricht — zu teuer für eine reine
+    # Hover-Anzeige). Faustregel laut Anthropic-Doku: ~4 Zeichen/Token für
+    # Deutsch/Englisch. Bewusst als Schätzwert markiert (Frontend zeigt "~").
+    stripped = (text or "").strip()
+    if not stripped:
+        return 0
+    return max(1, round(len(stripped) / 4))
+
+
 def row_to_message(row: sqlite3.Row) -> dict:
     d = dict(row)
     if d.get("metadata"):
@@ -88,6 +100,7 @@ def row_to_message(row: sqlite3.Row) -> dict:
             d["metadata"] = json.loads(d["metadata"])
         except (TypeError, json.JSONDecodeError):
             pass
+    d["token_count"] = estimate_tokens(d.get("content"))
     return d
 
 
